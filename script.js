@@ -1,3 +1,4 @@
+// 1. buscador de espacios en el catalogo
 function buscarLocal() {
   let texto = document.getElementById("inputBuscar").value.toLowerCase();
   let tarjetas = document.querySelectorAll(".col-12.col-md-6.col-lg-4");
@@ -7,6 +8,7 @@ function buscarLocal() {
   });
 }
 
+// 2. calculadora de precio en vivo para el modal
 function calcularTotal() {
   let horaIn = parseInt(document.getElementById("horaInicio").value.split(":")[0]);
   let horaOut = parseInt(document.getElementById("horaFin").value.split(":")[0]);
@@ -23,6 +25,7 @@ function calcularTotal() {
   }
 }
 
+// 3. enviar reserva, alerta con datos y cierre de modal
 function enviarReserva(event) {
   event.preventDefault();
   let nombre = document.getElementById("nombreCliente").value;

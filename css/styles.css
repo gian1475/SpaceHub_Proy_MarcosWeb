@@ -1,9 +1,11 @@
+/* fuente y fondo general */
 body {
     font-family: Arial, sans-serif;
     background-color: #F2ECE2;
     color: #2B2118;
 }
 
+/* barra de navegacion / navbar */
 .navbar {
     background-color: #EFD1AA !important;
 }
@@ -24,11 +26,13 @@ body {
     font-weight: bold;
 }
 
+/* titulos */
 h1, h2, h3, h4, h5 {
     color: #2B2118;
     font-weight: bold;
 }
 
+/* tarjetas / cards */
 .card {
     border: 1px solid #E3D5C5;
     background-color: #FAF8F5;
@@ -43,6 +47,7 @@ h1, h2, h3, h4, h5 {
     color: #2B2118;
 }
 
+/* botones */
 .btn-primary {
     background-color: #F0CB90;
     border-color: #E3B574;
@@ -56,11 +61,13 @@ h1, h2, h3, h4, h5 {
     color: #2B2118;
 }
 
+/* espaciado de secciones */
 section {
     padding-top: 40px;
     padding-bottom: 40px;
 }
 
+/* pie de pagina / footer */
 footer {
     margin-top: 30px;
     background-color: #EFD1AA !important;
@@ -71,10 +78,12 @@ footer h5 {
     color: #2B2118;
 }
 
+/* formularios */
 form {
     margin-top: 20px;
 }
 
+/* responsive para celulares */
 @media (max-width: 768px) {
     .card img {
         height: 200px;
