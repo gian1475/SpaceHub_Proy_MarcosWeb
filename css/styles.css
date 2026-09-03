@@ -1,0 +1,83 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #F2ECE2;
+    color: #2B2118;
+}
+
+.navbar {
+    background-color: #EFD1AA !important;
+}
+
+.navbar-brand {
+    font-weight: bold;
+    color: #2B2118;
+}
+
+.nav-link {
+    color: #2B2118;
+    font-weight: 500;
+}
+
+.nav-link:hover,
+.nav-link.active {
+    color: #8C5A32;
+    font-weight: bold;
+}
+
+h1, h2, h3, h4, h5 {
+    color: #2B2118;
+    font-weight: bold;
+}
+
+.card {
+    height: 100%;
+    border: 1px solid #E3D5C5;
+    background-color: #FAF8F5;
+}
+
+.card img {
+    height: 220px;
+    object-fit: cover;
+}
+
+.card-title {
+    color: #2B2118;
+}
+
+.btn-primary {
+    background-color: #F0CB90;
+    border-color: #E3B574;
+    color: #2B2118;
+    font-weight: bold;
+}
+
+.btn-primary:hover {
+    background-color: #E3B574;
+    border-color: #CE9B51;
+    color: #2B2118;
+}
+
+section {
+    padding-top: 40px;
+    padding-bottom: 40px;
+}
+
+footer {
+    margin-top: 30px;
+    background-color: #EFD1AA !important;
+}
+
+footer p,
+footer h5 {
+    color: #2B2118;
+}
+
+form {
+    margin-top: 20px;
+}
+
+@media (max-width: 768px) {
+    .card img {
+        height: 200px;
+    }
+}

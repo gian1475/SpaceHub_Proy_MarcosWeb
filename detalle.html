@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Detalle del Espacio - SpaceHub</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg sticky-top">
+  <div class="container">
+    <a class="navbar-brand" href="index.html">
+      <i class="bi bi-building"></i> SpaceHub
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menu">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="menu">
+      <ul class="navbar-nav ms-auto">
+        <li class="nav-item"><a class="nav-link" href="index.html">Inicio</a></li>
+        <li class="nav-item"><a class="nav-link" href="catalogo.html">Catálogo</a></li>
+        <li class="nav-item"><a class="nav-link" href="contacto.html">Contacto</a></li>
+        <li class="nav-item">
+          <a class="nav-link" href="login.html"><i class="bi bi-person"></i> Iniciar sesión</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<section class="py-4">
+  <div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div>
+        <span class="badge bg-secondary mb-1">Coworking</span>
+        <h1 class="h2 mb-0">Coworking Loft San Isidro</h1>
+        <p class="text-muted small mb-0"><i class="bi bi-geo-alt"></i> Av. Las Camelias 450, San Isidro, Lima</p>
+      </div>
+      <a href="catalogo.html" class="btn btn-outline-dark btn-sm">
+        <i class="bi bi-arrow-left"></i> Volver al catálogo
+      </a>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-12 col-lg-8">
+        <div id="carouselDetalle" class="carousel slide mb-4" data-bs-ride="carousel">
+          <div class="carousel-indicators">
+            <button type="button" data-bs-target="#carouselDetalle" data-bs-slide-to="0" class="active"></button>
+            <button type="button" data-bs-target="#carouselDetalle" data-bs-slide-to="1"></button>
+            <button type="button" data-bs-target="#carouselDetalle" data-bs-slide-to="2"></button>
+          </div>
+          <div class="carousel-inner rounded-3">
+            <div class="carousel-item active">
+              <img src="https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1000&q=80" class="d-block w-100" alt="Foto 1" style="height: 380px; object-fit: cover;">
+            </div>
+            <div class="carousel-item">
+              <img src="https://images.unsplash.com/photo-1527192491265-7e15c55b1ed2?auto=format&fit=crop&w=1000&q=80" class="d-block w-100" alt="Foto 2" style="height: 380px; object-fit: cover;">
+            </div>
+            <div class="carousel-item">
+              <img src="https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=1000&q=80" class="d-block w-100" alt="Foto 3" style="height: 380px; object-fit: cover;">
+            </div>
+          </div>
+          <button class="carousel-control-prev" type="button" data-bs-target="#carouselDetalle" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon"></span>
+          </button>
+          <button class="carousel-control-next" type="button" data-bs-target="#carouselDetalle" data-bs-slide="next">
+            <span class="carousel-control-next-icon"></span>
+          </button>
+        </div>
+
+        <div class="card p-4 mb-4">
+          <h4 class="mb-3">Descripción del espacio</h4>
+          <p class="text-muted" style="line-height: 1.8;">
+            Ambiente cálido con luz natural, mesas amplias de madera, café de especialidad ilimitado y zona chill out para trabajar cómodo y productivo. Espacio ideal para freelancers, programadores y equipos que buscan concentrarse sin interrupciones.
+          </p>
+          <hr>
+          <h5 class="mb-3">Servicios incluidos</h5>
+          <div class="d-flex flex-wrap gap-2">
+            <span class="badge bg-light text-dark border p-2"><i class="bi bi-wifi text-success me-1"></i> WiFi 500 Mbps</span>
+            <span class="badge bg-light text-dark border p-2"><i class="bi bi-cup-hot text-success me-1"></i> Café ilimitado</span>
+            <span class="badge bg-light text-dark border p-2"><i class="bi bi-easel text-success me-1"></i> Pizarra acrílica</span>
+            <span class="badge bg-light text-dark border p-2"><i class="bi bi-snow text-success me-1"></i> Aire acondicionado</span>
+            <span class="badge bg-light text-dark border p-2"><i class="bi bi-shield-check text-success me-1"></i> Seguridad 24h</span>
+          </div>
+        </div>
+
+        <div class="card p-4">
+          <h5 class="mb-2">Ubicación referencial</h5>
+          <p class="text-muted small">San Isidro, a 1 cuadra de la estación Canaval y Moreyra del Metropolitano.</p>
+          <div class="p-4 bg-light text-center rounded border">
+            <i class="bi bi-geo-alt-fill fs-1 text-danger"></i>
+            <p class="small text-muted mb-0 mt-1">Av. Las Camelias 450, San Isidro - Lima</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-12 col-lg-4">
+        <div class="card p-4 sticky-top" style="top: 90px;">
+          <span class="text-muted small">Precio por hora</span>
+          <h2 class="display-6 fw-bold mb-3">S/. 45.00</h2>
+
+          <ul class="list-unstyled small border-top border-bottom py-3 mb-4">
+            <li class="d-flex justify-content-between mb-2">
+              <span class="text-muted"><i class="bi bi-people me-1"></i> Capacidad:</span>
+              <strong>Hasta 15 personas</strong>
+            </li>
+            <li class="d-flex justify-content-between mb-2">
+              <span class="text-muted"><i class="bi bi-clock me-1"></i> Tiempo mínimo:</span>
+              <strong>1 hora</strong>
+            </li>
+            <li class="d-flex justify-content-between">
+              <span class="text-muted"><i class="bi bi-check-circle me-1"></i> Estado:</span>
+              <span class="badge bg-success">Disponible</span>
+            </li>
+          </ul>
+
+          <button type="button" class="btn btn-primary btn-lg w-100 mb-2" data-bs-toggle="modal" data-bs-target="#modalReserva">
+            <i class="bi bi-calendar-check me-1"></i> Solicitar Reserva
+          </button>
+          <p class="text-center text-muted small mb-0" style="font-size: 0.75rem;">
+            No se requiere tarjeta de crédito para reservar.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="modal fade" id="modalReserva" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Solicitud de Reserva</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form onsubmit="alert('¡Solicitud de reserva enviada exitosamente!'); return false;">
+          <div class="mb-3">
+            <label class="form-label small fw-bold">Local seleccionado</label>
+            <input type="text" class="form-control" value="Coworking Loft San Isidro - S/ 45/hr" readonly>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-bold">Fecha</label>
+            <input type="date" class="form-control" required>
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label class="form-label small fw-bold">Hora inicio</label>
+              <input type="time" class="form-control" value="09:00" required>
+            </div>
+            <div class="col-6">
+              <label class="form-label small fw-bold">Hora fin</label>
+              <input type="time" class="form-control" value="13:00" required>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-bold">Tu nombre</label>
+            <input type="text" class="form-control" placeholder="Ej. Gianfranco Soto" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-bold">Correo de contacto</label>
+            <input type="email" class="form-control" placeholder="tu@correo.com" required>
+          </div>
+          <button type="submit" class="btn btn-primary w-100">Enviar Solicitud</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer class="py-4">
+  <div class="container">
+    <div class="row align-items-center">
+      <div class="col-12 col-md-6">
+        <h5 class="mb-1"><i class="bi bi-building"></i> SpaceHub</h5>
+        <p class="small mb-0">Tu espacio para encontrar salas, terrazas y estudios en Lima.</p>
+      </div>
+      <div class="col-12 col-md-6 text-md-end mt-3 mt-md-0">
+        <i class="bi bi-facebook me-3 fs-5"></i>
+        <i class="bi bi-instagram me-3 fs-5"></i>
+        <i class="bi bi-envelope fs-5"></i>
+      </div>
+    </div>
+    <hr class="my-3">
+    <p class="text-center small mb-0">© 2026 SpaceHub. Todos los derechos reservados.</p>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
