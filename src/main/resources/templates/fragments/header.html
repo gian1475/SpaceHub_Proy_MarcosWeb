@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head></head>
+<body>
+
+<th:block th:fragment="header(activo)">
+  <nav class="navbar navbar-expand-lg sticky-top">
+    <div class="container">
+      <a class="navbar-brand" th:href="@{/}">
+        <i class="bi bi-building"></i> SpaceHub
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menu">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="menu">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item">
+            <a class="nav-link" th:classappend="${activo == 'inicio'} ? 'active'" th:href="@{/}">Inicio</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" th:classappend="${activo == 'servicios'} ? 'active'" th:href="@{/servicios}">Catálogo</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" th:classappend="${activo == 'reservas'} ? 'active'" th:href="@{/reservas}">Reservas</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" th:classappend="${activo == 'contacto'} ? 'active'" th:href="@{/contacto}">Contacto</a>
+          </li>
+
+          <!-- Opciones según el tipo de página -->
+          <th:block th:if="${activo == 'admin'}">
+            <li class="nav-item">
+              <a class="nav-link active" th:href="@{/administracion}">Panel Admin</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" th:href="@{/login}"><i class="bi bi-box-arrow-right"></i> Salir</a>
+            </li>
+          </th:block>
+
+          <th:block th:if="${activo == 'registro'}">
+            <li class="nav-item">
+              <a class="nav-link active" th:href="@{/registro}"><i class="bi bi-person-plus"></i> Registrarse</a>
+            </li>
+          </th:block>
+
+          <th:block th:if="${activo != 'admin' and activo != 'registro'}">
+            <li class="nav-item">
+              <a class="nav-link" th:classappend="${activo == 'login'} ? 'active'" th:href="@{/login}">
+                <i class="bi bi-person"></i> Iniciar sesión
+              </a>
+            </li>
+          </th:block>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Alerta Flash si existe un mensaje -->
+  <div th:if="${mensaje}" class="container mt-3">
+    <div class="alert alert-success alert-dismissible fade show mb-0" role="alert">
+      <i class="bi bi-check-circle-fill me-2"></i><span th:text="${mensaje}">Mensaje de éxito</span>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  </div>
+</th:block>
+
+</body>
+</html>
