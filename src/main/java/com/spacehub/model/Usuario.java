@@ -1,12 +1,25 @@
 package com.spacehub.model;
 
+import jakarta.persistence.*;
+
+@Entity
+@Table(name = "usuarios")
 public class Usuario {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    @Column(nullable = false, length = 80)
     private String nombres;
+    @Column(nullable = false, length = 80)
     private String apellidos;
+    @Column(nullable = false, unique = true, length = 100)
     private String correo;
+    @Column(length = 15)
     private String telefono;
+    @Column(nullable = false, length = 255)
     private String password;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "rol_id", nullable = false)
     private Rol rol;
 
     public Usuario() {

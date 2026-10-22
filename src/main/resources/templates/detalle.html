@@ -14,6 +14,7 @@
 <th:block th:replace="~{fragments/header :: header('detalle')}"></th:block>
 
 <!-- contenido principal del detalle -->
+<div th:if="${error}" class="container alert alert-danger mt-3" role="alert" th:text="${error}"></div>
 <section class="py-4">
   <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -30,7 +31,8 @@
     <div class="row g-4">
       <div class="col-12 col-lg-8">
         <!-- carrusel / galeria de fotos -->
-        <div id="carouselDetalle" class="carousel slide mb-4" data-bs-ride="carousel">
+        <div th:if="${#lists.isEmpty(servicio.imagenes)}" class="card p-5 text-center text-muted mb-4">Sin fotos disponibles</div>
+        <div th:if="${!#lists.isEmpty(servicio.imagenes)}" id="carouselDetalle" class="carousel slide mb-4" data-bs-ride="carousel">
           <div class="carousel-indicators">
             <button th:each="img, iterStat : ${servicio.imagenes}"
                     type="button"
@@ -125,6 +127,7 @@
       </div>
       <div class="modal-body">
         <form th:action="@{/reservas}" method="POST" th:data-precio="${servicio.precioPorHora}">
+<input type="hidden" name="_csrf" th:value="${session.csrf}">
           <input type="hidden" name="servicioId" th:value="${servicio.id}">
           <div class="mb-3">
             <label class="form-label small fw-bold">Local seleccionado</label>
@@ -132,31 +135,25 @@
           </div>
           <div class="mb-3">
             <label class="form-label small fw-bold">Fecha</label>
-            <input type="date" name="fecha" id="fechaReserva" class="form-control" required>
+            <input type="date" name="fecha" id="fechaReserva" class="form-control" required th:value="${reservaFecha}">
           </div>
           <div class="row g-2 mb-3">
             <div class="col-6">
               <label class="form-label small fw-bold">Hora inicio</label>
-              <input type="time" name="horaInicio" id="horaInicio" class="form-control" value="09:00" onchange="calcularTotal()" required>
+              <input type="time" th:value="${reservaInicio != null ? reservaInicio : '09:00'}" name="horaInicio" id="horaInicio" class="form-control" value="09:00" onchange="calcularTotal()" required>
             </div>
             <div class="col-6">
               <label class="form-label small fw-bold">Hora fin</label>
-              <input type="time" name="horaFin" id="horaFin" class="form-control" value="13:00" onchange="calcularTotal()" required>
+              <input type="time" th:value="${reservaFin != null ? reservaFin : '13:00'}" name="horaFin" id="horaFin" class="form-control" value="13:00" onchange="calcularTotal()" required>
             </div>
           </div>
           <div class="p-2 bg-light border rounded mb-3 d-flex justify-content-between small">
             <span>Tiempo: <strong id="textoHoras">4 hora(s)</strong></span>
             <span>Total estimado: <strong id="totalPagar" class="text-success">S/ 180.00</strong></span>
           </div>
-          <div class="mb-3">
-            <label class="form-label small fw-bold">Tu nombre</label>
-            <input type="text" name="clienteNombre" id="nombreCliente" class="form-control" placeholder="Ej. Gerardo Guevara" required>
-          </div>
-          <div class="mb-3">
-            <label class="form-label small fw-bold">Correo de contacto</label>
-            <input type="email" name="clienteCorreo" class="form-control" placeholder="tu@correo.com" required>
-          </div>
-          <button type="submit" class="btn btn-primary w-100">Enviar Solicitud</button>
+          <p th:if="${session.usuarioId != null}" class="small text-muted">La solicitud se registrará a nombre de tu cuenta.</p>
+          <p th:if="${session.usuarioId == null}" class="alert alert-info"><a th:href="@{/login}">Inicia sesión</a> para reservar este espacio.</p>
+          <button th:if="${session.usuarioId != null}" type="submit" class="btn btn-primary w-100">Enviar Solicitud</button>
         </form>
       </div>
     </div>

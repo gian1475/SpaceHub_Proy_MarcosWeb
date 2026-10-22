@@ -26,19 +26,22 @@
       <div class="col-12 col-lg-6">
         <div class="card p-4">
           <h4 class="mb-3"><i class="bi bi-chat-dots me-2"></i> Envíanos un mensaje</h4>
-          <form th:action="@{/contacto}" method="POST">
+          <p class="small text-muted">Formulario de demostración: los mensajes no se envían ni se guardan.</p>
+          <form th:action="@{/contacto}" method="POST" th:object="${contactoForm}">
+          <div th:if="${#fields.hasAnyErrors()}" class="alert alert-danger" role="alert"><ul class="mb-0"><li th:each="err : ${#fields.allErrors()}" th:text="${err}"></li></ul></div>
+<input type="hidden" name="_csrf" th:value="${session.csrf}">
             <div class="mb-3">
               <label class="form-label small fw-bold">Nombre completo</label>
-              <input type="text" name="nombre" class="form-control" placeholder="Ej. Juan De Dios Chiu" required>
+              <input type="text" th:field="*{nombre}" th:errorclass="is-invalid" class="form-control" placeholder="Ej. Juan De Dios Chiu" minlength="2" maxlength="100" required>
             </div>
             <div class="row g-2 mb-3">
               <div class="col-6">
                 <label class="form-label small fw-bold">Correo</label>
-                <input type="email" name="correo" class="form-control" placeholder="tu@correo.com" required>
+                <input type="email" th:field="*{correo}" th:errorclass="is-invalid" class="form-control" placeholder="tu@correo.com" maxlength="100" required>
               </div>
               <div class="col-6">
                 <label class="form-label small fw-bold">Motivo</label>
-                <select name="motivo" class="form-select" required>
+                <select th:field="*{motivo}" th:errorclass="is-invalid" class="form-select" required>
                   <option value="">Selecciona</option>
                   <option value="reserva">Duda sobre reserva</option>
                   <option value="publicar">Quiero ser anfitrión</option>
@@ -48,7 +51,7 @@
             </div>
             <div class="mb-3">
               <label class="form-label small fw-bold">Mensaje</label>
-              <textarea name="mensaje" class="form-control" rows="4" placeholder="Escribe tu consulta..." required></textarea>
+              <textarea th:field="*{mensaje}" th:errorclass="is-invalid" class="form-control" rows="4" placeholder="Escribe tu consulta..." minlength="10" maxlength="2000" required></textarea>
             </div>
             <button type="submit" class="btn btn-primary w-100">Enviar mensaje</button>
           </form>
@@ -85,7 +88,7 @@
             </h2>
             <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
               <div class="accordion-body small text-muted">
-                Al enviar el formulario desde la ficha del espacio, el anfitrión recibe la solicitud y se coordina la confirmación directamente vía WhatsApp o correo electrónico.
+                Al solicitar una reserva desde la ficha del espacio, queda pendiente de revisión. El administrador puede aprobarla o rechazarla y verás su estado actualizado en tus reservas.
               </div>
             </div>
           </div>

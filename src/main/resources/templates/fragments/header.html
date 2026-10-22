@@ -27,29 +27,13 @@
             <a class="nav-link" th:classappend="${activo == 'contacto'} ? 'active'" th:href="@{/contacto}">Contacto</a>
           </li>
 
-          <!-- Opciones según el tipo de página -->
-          <th:block th:if="${activo == 'admin'}">
-            <li class="nav-item">
-              <a class="nav-link active" th:href="@{/administracion}">Panel Admin</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" th:href="@{/login}"><i class="bi bi-box-arrow-right"></i> Salir</a>
-            </li>
+          <th:block th:if="${session.usuarioId != null}">
+            <li class="nav-item" th:if="${session.usuarioRol == 'ADMIN'}"><a class="nav-link" th:classappend="${activo == 'admin'} ? 'active'" th:href="@{/administracion}">Panel Admin</a></li>
+            <li class="nav-item"><span class="nav-link" th:text="${session.usuarioNombre}"></span></li>
+            <li class="nav-item"><form class="m-0" th:action="@{/logout}" method="post">
+<input type="hidden" name="_csrf" th:value="${session.csrf}"><button class="btn nav-link" type="submit"><i class="bi bi-box-arrow-right"></i> Salir</button></form></li>
           </th:block>
-
-          <th:block th:if="${activo == 'registro'}">
-            <li class="nav-item">
-              <a class="nav-link active" th:href="@{/registro}"><i class="bi bi-person-plus"></i> Registrarse</a>
-            </li>
-          </th:block>
-
-          <th:block th:if="${activo != 'admin' and activo != 'registro'}">
-            <li class="nav-item">
-              <a class="nav-link" th:classappend="${activo == 'login'} ? 'active'" th:href="@{/login}">
-                <i class="bi bi-person"></i> Iniciar sesión
-              </a>
-            </li>
-          </th:block>
+          <li class="nav-item" th:if="${session.usuarioId == null}"><a class="nav-link" th:classappend="${activo == 'login'} ? 'active'" th:href="@{/login}">Iniciar sesión</a></li>
         </ul>
       </div>
     </div>

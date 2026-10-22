@@ -19,7 +19,7 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
       <div>
         <h1 class="h2 mb-0">Solicitudes de Reserva</h1>
-        <p class="text-muted small mb-0">Listado de reservas solicitadas en la plataforma.</p>
+        <p class="text-muted small mb-0">Historial de solicitudes de tu cuenta.</p>
       </div>
       <a th:href="@{/servicios}" class="btn btn-primary">
         <i class="bi bi-plus-circle me-1"></i> Nueva Reserva
@@ -55,7 +55,7 @@
               <td th:text="${r.clienteNombre}">Gerardo Guevara</td>
               <td th:text="${r.servicio.nombre}">Rooftop Sunset Miraflores</td>
               <td th:text="${#temporals.format(r.fecha, 'dd/MM/yyyy')}">12/09/2026</td>
-              <td th:text="${r.horas + ' hrs'}">4 hrs</td>
+              <td th:text="${r.duracionTexto}">4 hrs</td>
               <td><strong th:text="${'S/ ' + #numbers.formatDecimal(r.total,1,'NONE',2,'POINT')}">S/ 760.00</strong></td>
               <td>
                 <span class="badge"

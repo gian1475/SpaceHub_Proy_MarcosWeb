@@ -1,124 +1,137 @@
 package com.spacehub.service;
 
 import com.spacehub.model.Reserva;
-import com.spacehub.model.Servicio;
+import com.spacehub.repository.ReservaRepository;
+import com.spacehub.repository.ServicioRepository;
+import com.spacehub.repository.UsuarioRepository;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-
+import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.time.Duration;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
 
 @Service
+@Transactional(readOnly = true)
 public class ReservaService {
+    private final ServicioRepository servicioRepository;
+    private final ReservaRepository reservaRepository;
+    private final UsuarioRepository usuarioRepository;
+    @jakarta.persistence.PersistenceContext
+    private jakarta.persistence.EntityManager entityManager;
 
-    private final ServicioService servicioService;
-    private final List<Reserva> reservas = new ArrayList<>();
-    private final AtomicLong contadorId = new AtomicLong(101);
-
-    public ReservaService(ServicioService servicioService) {
-        this.servicioService = servicioService;
-        cargarReservasSemilla();
-    }
-
-    private void cargarReservasSemilla() {
-        Servicio s2 = servicioService.buscarPorId(2L); // Rooftop Sunset Miraflores (190.00)
-        Servicio s1 = servicioService.buscarPorId(1L); // Coworking Loft San Isidro (45.00)
-        Servicio s4 = servicioService.buscarPorId(4L); // Studio Click Barranco (80.00)
-
-        // RES-101
-        reservas.add(new Reserva(
-                contadorId.getAndIncrement(),
-                s2,
-                "Gerardo Guevara",
-                "gerardo@correo.com",
-                LocalDate.of(2026, 9, 12),
-                LocalTime.of(14, 0),
-                LocalTime.of(18, 0),
-                760.00,
-                "Aprobada"));
-
-        // RES-102
-        reservas.add(new Reserva(
-                contadorId.getAndIncrement(),
-                s1,
-                "Juan De Dios Chiu",
-                "juan@correo.com",
-                LocalDate.of(2026, 9, 15),
-                LocalTime.of(9, 0),
-                LocalTime.of(14, 0),
-                225.00,
-                "Pendiente"));
-
-        // RES-103
-        reservas.add(new Reserva(
-                contadorId.getAndIncrement(),
-                s4,
-                "Jahyre Turin",
-                "jahyre@correo.com",
-                LocalDate.of(2026, 9, 18),
-                LocalTime.of(10, 0),
-                LocalTime.of(16, 0),
-                480.00,
-                "Pendiente"));
+    public ReservaService(ServicioRepository servicioRepository, ReservaRepository reservaRepository,
+            UsuarioRepository usuarioRepository) {
+        this.servicioRepository = servicioRepository;
+        this.reservaRepository = reservaRepository;
+        this.usuarioRepository = usuarioRepository;
     }
 
     public List<Reserva> listarTodas() {
-        List<Reserva> copia = new ArrayList<>(reservas);
-        Collections.reverse(copia); // Más recientes primero
-        return copia;
+        return reservaRepository.findAll(Sort.by(Sort.Direction.DESC, "id"));
     }
 
-    public Reserva crearReserva(Long servicioId, String clienteNombre, String clienteCorreo,
+    public List<Reserva> listarPorUsuario(Long usuarioId) {
+        return reservaRepository.findByUsuarioIdOrderByIdDesc(usuarioId);
+    }
+
+    @Transactional
+    public Reserva crearReserva(Long servicioId, Long usuarioId,
             LocalDate fecha, LocalTime horaInicio, LocalTime horaFin) {
-        Servicio servicio = servicioService.buscarPorId(servicioId);
-        if (servicio == null) {
-            throw new IllegalArgumentException("El servicio especificado no existe.");
+        var servicio = servicioRepository.bloquearPorId(servicioId)
+                .orElseThrow(() -> new IllegalArgumentException("El espacio especificado no existe."));
+        validarHorario(fecha, horaInicio, horaFin, true);
+        if (!"Disponible".equals(servicio.getEstado())) throw new IllegalArgumentException("El espacio no está disponible para nuevas reservas.");
+        validarCruce(servicioId, fecha, horaInicio, horaFin, null);
+        var usuario = usuarioRepository.findById(usuarioId)
+                .orElseThrow(() -> new IllegalArgumentException("La cuenta ya no existe. Inicia sesión nuevamente."));
+        BigDecimal total = calcularTotal(servicio.getPrecioPorHoraDecimal(), horaInicio, horaFin);
+        Reserva reserva = new Reserva(null, servicio, usuario.getNombres(), usuario.getCorreo(),
+                fecha, horaInicio, horaFin, 0, "Pendiente");
+        reserva.setTotalDecimal(total);
+        reserva.setUsuario(usuario);
+        return reservaRepository.saveAndFlush(reserva);
+    }
+
+    public Reserva buscar(Long id) {
+        return reservaRepository.findById(id).orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                org.springframework.http.HttpStatus.NOT_FOUND, "La reserva no existe."));
+    }
+
+    public com.spacehub.form.ReservaForm formulario(Long id) {
+        var r = buscar(id); var f = new com.spacehub.form.ReservaForm();
+        f.setId(r.getId()); f.setFecha(r.getFecha()); f.setHoraInicio(r.getHoraInicio());
+        f.setHoraFin(r.getHoraFin()); f.setEstado(r.getEstado()); return f;
+    }
+
+    private Reserva bloquearReserva(Long id) {
+        var r = buscar(id);
+        servicioRepository.bloquearPorId(r.getServicio().getId()).orElseThrow();
+        try { entityManager.refresh(r); }
+        catch (jakarta.persistence.EntityNotFoundException ex) {
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "La reserva ya no existe.");
         }
+        return r;
+    }
 
-        int horas = 1;
-        if (horaInicio != null && horaFin != null) {
-            int diff = horaFin.getHour() - horaInicio.getHour();
-            horas = diff > 0 ? diff : 1;
+    private BigDecimal calcularTotal(BigDecimal precio, LocalTime inicio, LocalTime fin) {
+        BigDecimal total = precio.multiply(BigDecimal.valueOf(Duration.between(inicio,fin).toSeconds()))
+                .divide(BigDecimal.valueOf(3600),2,RoundingMode.HALF_UP);
+        if (total.compareTo(new BigDecimal("99999999.99")) > 0)
+            throw new IllegalArgumentException("El importe supera el máximo permitido. Reduce la duración de la reserva.");
+        return total;
+    }
+
+    private void validarHorario(LocalDate fecha, LocalTime inicio, LocalTime fin, boolean nuevaFecha) {
+        if (fecha == null || inicio == null || fin == null || !fin.isAfter(inicio))
+            throw new IllegalArgumentException("Seleccione una fecha y una hora final posterior a la inicial.");
+        if (nuevaFecha && !fecha.atTime(inicio).isAfter(java.time.LocalDateTime.now(java.time.ZoneId.of("America/Lima"))))
+            throw new IllegalArgumentException("La reserva debe comenzar en una fecha y hora futuras.");
+    }
+
+    private void validarCruce(Long servicioId, LocalDate fecha, LocalTime inicio, LocalTime fin, Long excluir) {
+        if (!reservaRepository.conflictos(servicioId, fecha, inicio, fin, excluir).isEmpty())
+            throw new IllegalArgumentException("El espacio ya tiene una reserva pendiente o aprobada en ese horario.");
+    }
+
+    @Transactional
+    public void editar(com.spacehub.form.ReservaForm f) {
+        var r = bloquearReserva(f.getId());
+        boolean cambio = !r.getFecha().equals(f.getFecha()) || !r.getHoraInicio().equals(f.getHoraInicio()) || !r.getHoraFin().equals(f.getHoraFin());
+        validarHorario(f.getFecha(), f.getHoraInicio(), f.getHoraFin(), cambio);
+        if (!java.util.Set.of("Pendiente","Aprobada","Rechazada").contains(f.getEstado())) throw new IllegalArgumentException("Estado no válido.");
+        if (!"Rechazada".equals(f.getEstado())) {
+            if (cambio && !"Disponible".equals(r.getServicio().getEstado())) throw new IllegalArgumentException("El espacio no está disponible.");
+            validarCruce(r.getServicio().getId(), f.getFecha(), f.getHoraInicio(), f.getHoraFin(), r.getId());
         }
-
-        double total = horas * servicio.getPrecioPorHora();
-
-        Reserva nuevaReserva = new Reserva(
-                contadorId.getAndIncrement(),
-                servicio,
-                clienteNombre,
-                clienteCorreo,
-                fecha,
-                horaInicio,
-                horaFin,
-                total,
-                "Pendiente");
-
-        reservas.add(nuevaReserva);
-        return nuevaReserva;
+        if (cambio) r.setTotalDecimal(calcularTotal(r.getServicio().getPrecioPorHoraDecimal(), f.getHoraInicio(), f.getHoraFin()));
+        r.setFecha(f.getFecha()); r.setHoraInicio(f.getHoraInicio()); r.setHoraFin(f.getHoraFin()); r.setEstado(f.getEstado());
+        reservaRepository.saveAndFlush(r);
     }
 
-    public int obtenerTotalEspacios() {
-        return servicioService.listarTodos().size();
+    @Transactional
+    public void cambiarEstado(Long id, String estado) {
+        var r = bloquearReserva(id);
+        if (!java.util.Set.of("Pendiente","Aprobada","Rechazada").contains(estado)) throw new IllegalArgumentException("Estado no válido.");
+        if (!"Rechazada".equals(estado)) validarCruce(r.getServicio().getId(),r.getFecha(),r.getHoraInicio(),r.getHoraFin(),r.getId());
+        r.setEstado(estado); reservaRepository.saveAndFlush(r);
     }
 
-    public int obtenerTotalReservas() {
-        return reservas.size();
+    @Transactional
+    public void eliminar(Long id) {
+        var r = bloquearReserva(id); reservaRepository.delete(r); reservaRepository.flush();
     }
 
-    public long obtenerReservasPendientesCount() {
-        return reservas.stream()
-                .filter(r -> "Pendiente".equalsIgnoreCase(r.getEstado()))
-                .count();
-    }
+    public int obtenerTotalEspacios() { return Math.toIntExact(servicioRepository.count()); }
+    public int obtenerTotalReservas() { return Math.toIntExact(reservaRepository.count()); }
+    public long obtenerReservasPendientesCount() { return reservaRepository.countByEstadoIgnoreCase("Pendiente"); }
 
     public double calcularIngresosTotales() {
-        return reservas.stream()
-                .filter(r -> !"Rechazada".equalsIgnoreCase(r.getEstado()))
-                .mapToDouble(Reserva::getTotal)
-                .sum();
+        // Conserva el indicador previo: total solicitado excepto reservas rechazadas.
+        return reservaRepository.findByEstadoNotIgnoreCase("Rechazada").stream()
+                .map(Reserva::getTotalDecimal).reduce(BigDecimal.ZERO, BigDecimal::add).doubleValue();
     }
 }

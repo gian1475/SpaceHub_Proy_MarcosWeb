@@ -31,38 +31,40 @@
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
           </div>
 
-          <form th:action="@{/registro}" method="POST">
+          <form th:action="@{/registro}" method="POST" th:object="${registroForm}">
+<input type="hidden" name="_csrf" th:value="${session.csrf}">
+            <div th:if="${#fields.hasAnyErrors()}" class="alert alert-danger" role="alert"><ul class="mb-0"><li th:each="err : ${#fields.allErrors()}" th:text="${err}"></li></ul></div>
             <div class="row g-2 mb-3">
               <div class="col-6">
                 <label class="form-label small fw-bold">Nombre</label>
-                <input type="text" name="nombres" class="form-control" placeholder="Gerardo" required>
+                <input type="text" th:field="*{nombres}" th:errorclass="is-invalid" class="form-control" placeholder="Gerardo" required><div class="invalid-feedback" th:errors="*{nombres}"></div>
               </div>
               <div class="col-6">
                 <label class="form-label small fw-bold">Apellidos</label>
-                <input type="text" name="apellidos" class="form-control" placeholder="Guevara" required>
+                <input type="text" th:field="*{apellidos}" th:errorclass="is-invalid" class="form-control" placeholder="Guevara" required><div class="invalid-feedback" th:errors="*{apellidos}"></div>
               </div>
             </div>
             <div class="mb-3">
               <label class="form-label small fw-bold">Correo electrónico</label>
-              <input type="email" name="correo" class="form-control" placeholder="tu@correo.com" required>
+              <input type="email" th:field="*{correo}" th:errorclass="is-invalid" class="form-control" placeholder="tu@correo.com" required><div class="invalid-feedback" th:errors="*{correo}"></div>
             </div>
             <div class="mb-3">
               <label class="form-label small fw-bold">Teléfono / WhatsApp</label>
-              <input type="tel" name="telefono" class="form-control" placeholder="987654321" required>
+              <input type="tel" th:field="*{telefono}" th:errorclass="is-invalid" class="form-control" placeholder="987654321" required><div class="invalid-feedback" th:errors="*{telefono}"></div>
             </div>
             <div class="mb-3">
               <label class="form-label small fw-bold">Tipo de cuenta</label>
-              <select name="tipo" class="form-select">
+              <select th:field="*{tipo}" th:errorclass="is-invalid" class="form-select">
                 <option value="cliente">Cliente (Quiero alquilar espacios)</option>
                 <option value="propietario">Propietario (Quiero publicar locales)</option>
-              </select>
+              </select><div class="invalid-feedback" th:errors="*{tipo}"></div>
             </div>
             <div class="mb-3">
               <label class="form-label small fw-bold">Contraseña</label>
-              <input type="password" name="password" class="form-control" placeholder="••••••••" required>
+              <input type="password" name="password" th:classappend="${#fields.hasErrors('password')} ? 'is-invalid'" minlength="8" maxlength="72" class="form-control" placeholder="••••••••" required><div class="invalid-feedback" th:errors="*{password}"></div>
             </div>
             <div class="mb-3 form-check">
-              <input type="checkbox" class="form-check-input" id="terminos" required>
+              <input type="checkbox" class="form-check-input" id="terminos" name="terminos" value="true" required>
               <label class="form-check-label small" for="terminos">Acepto los términos y condiciones</label>
             </div>
             <button type="submit" class="btn btn-primary w-100 mb-3">Crear Cuenta</button>
