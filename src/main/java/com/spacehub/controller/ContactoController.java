@@ -20,7 +20,7 @@ public class ContactoController {
     @PostMapping("/contacto")
     public String procesarContacto(@Valid @ModelAttribute ContactoForm contactoForm, BindingResult errores, RedirectAttributes flash) {
         if (errores.hasErrors()) return "contacto";
-        flash.addFlashAttribute("mensaje","Datos validados. Para enviar tu consulta, utiliza nuestros canales de contacto.");
+        flash.addFlashAttribute("mensaje","Datos validados. Este formulario de demostración no envía ni guarda mensajes.");
         return "redirect:/contacto";
     }
 }

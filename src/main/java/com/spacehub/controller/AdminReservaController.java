@@ -14,11 +14,20 @@ import org.springframework.dao.ConcurrencyFailureException;
 @RequestMapping("/admin/reservas")
 public class AdminReservaController {
     private final ReservaService reservas;
-    public AdminReservaController(ReservaService reservas) { this.reservas=reservas; }
+    private final com.spacehub.service.ConsultaEspaciosService consultas;
+    public AdminReservaController(ReservaService reservas, com.spacehub.service.ConsultaEspaciosService consultas) {
+        this.reservas = reservas;
+        this.consultas = consultas;
+    }
     @InitBinder("reservaForm")
     public void binder(org.springframework.web.bind.WebDataBinder binder) { binder.setAllowedFields("id","fecha","horaInicio","horaFin","estado"); }
     @GetMapping
-    public String listar(Model model) { model.addAttribute("reservas",reservas.listarTodas()); return "admin/reservas"; }
+    public String listar(@RequestParam(name = "categoriaId", required = false) Long categoriaId,
+            @RequestParam(name = "espacioId", required = false) Long espacioId, Model model) {
+        consultas.preparar(categoriaId, espacioId, model);
+        model.addAttribute("reservas", reservas.consultarListado(categoriaId, espacioId));
+        return "admin/reservas";
+    }
     private String formulario(ReservaForm form, Model model) {
         model.addAttribute("reserva",reservas.buscar(form.getId())); return "admin/reserva-form";
     }

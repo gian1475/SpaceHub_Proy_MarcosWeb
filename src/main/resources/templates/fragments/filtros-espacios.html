@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"><body>
+<form th:fragment="filtros(destino)" th:action="@{${destino}}" method="get" class="card card-body shadow-sm mb-4" data-filtros-espacios>
+  <div class="row g-3 align-items-end">
+    <div class="col-md-4">
+      <label for="categoriaFiltro" class="form-label">Categoría</label>
+      <select id="categoriaFiltro" name="categoriaId" class="form-select" data-categoria>
+        <option value="">Todas las categorías</option>
+        <option th:each="c : ${categorias}" th:value="${c.id}" th:text="${c.nombre}" th:selected="${c.id == categoriaId}"></option>
+      </select>
+    </div>
+    <div class="col-md-5">
+      <label for="espacioFiltro" class="form-label">Espacio</label>
+      <select id="espacioFiltro" name="espacioId" class="form-select" data-espacio th:disabled="${categoriaId == null}">
+        <option value="" th:text="${categoriaId == null ? 'Primero selecciona una categoría' : (#lists.isEmpty(espaciosFiltro) ? 'No hay espacios en esta categoría' : 'Todos los espacios de la categoría')}"></option>
+        <option th:each="e : ${espaciosFiltro}" th:value="${e.id}" th:text="${e.nombre}" th:selected="${e.id == espacioId}"></option>
+      </select>
+    </div>
+    <div class="col-md-3 d-flex flex-wrap gap-2"><button type="submit" class="btn btn-primary">Consultar</button><a th:href="@{${destino}}" class="btn btn-outline-secondary">Limpiar</a></div>
+  </div>
+  <p class="small text-muted mb-0 mt-2">Elige una categoría para consultar sus espacios.</p>
+  <noscript><p class="small mb-0">Pulsa Limpiar antes de cambiar de categoría. Luego elige la categoría y pulsa Consultar para cargar sus espacios.</p></noscript>
+</form>
+</body></html>

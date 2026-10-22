@@ -38,7 +38,7 @@ public class ReservaController {
         flash.addFlashAttribute("reservaFin",solicitud.getHoraFin());
         String regreso = solicitud.getServicioId()==null ? "redirect:/servicios" : "redirect:/servicios/"+solicitud.getServicioId();
         if (errores.hasErrors()) {
-            flash.addFlashAttribute("error","Revise la fecha y el horario: la hora final debe ser posterior a la inicial.");
+            flash.addFlashAttribute("error","Revisa la fecha y el horario: la reserva debe durar al menos una hora y terminar el mismo día.");
             return regreso;
         }
         try {

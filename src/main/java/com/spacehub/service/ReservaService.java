@@ -30,6 +30,10 @@ public class ReservaService {
         this.usuarioRepository = usuarioRepository;
     }
 
+    public List<com.spacehub.dto.ReservaListadoDTO> consultarListado(Long categoriaId, Long espacioId) {
+        return reservaRepository.consultarListado(categoriaId, espacioId);
+    }
+
     public List<Reserva> listarTodas() {
         return reservaRepository.findAll(Sort.by(Sort.Direction.DESC, "id"));
     }
@@ -88,6 +92,8 @@ public class ReservaService {
     private void validarHorario(LocalDate fecha, LocalTime inicio, LocalTime fin, boolean nuevaFecha) {
         if (fecha == null || inicio == null || fin == null || !fin.isAfter(inicio))
             throw new IllegalArgumentException("Seleccione una fecha y una hora final posterior a la inicial.");
+        if (Duration.between(inicio, fin).compareTo(Duration.ofHours(1)) < 0)
+            throw new IllegalArgumentException("La reserva debe durar al menos una hora.");
         if (nuevaFecha && !fecha.atTime(inicio).isAfter(java.time.LocalDateTime.now(java.time.ZoneId.of("America/Lima"))))
             throw new IllegalArgumentException("La reserva debe comenzar en una fecha y hora futuras.");
     }
@@ -97,12 +103,22 @@ public class ReservaService {
             throw new IllegalArgumentException("El espacio ya tiene una reserva pendiente o aprobada en ese horario.");
     }
 
+    // Aprobar o reactivar una solicitud exige que el espacio siga disponible.
+    private void validarActivacion(Reserva reserva, String estado, LocalDate fecha, LocalTime inicio, LocalTime fin) {
+        if (!estado.equals(reserva.getEstado()) && !"Rechazada".equals(estado)) {
+            validarHorario(fecha, inicio, fin, true);
+            if (!"Disponible".equals(reserva.getServicio().getEstado()))
+                throw new IllegalArgumentException("El espacio no está disponible para aprobar o reactivar la reserva.");
+        }
+    }
+
     @Transactional
     public void editar(com.spacehub.form.ReservaForm f) {
         var r = bloquearReserva(f.getId());
         boolean cambio = !r.getFecha().equals(f.getFecha()) || !r.getHoraInicio().equals(f.getHoraInicio()) || !r.getHoraFin().equals(f.getHoraFin());
         validarHorario(f.getFecha(), f.getHoraInicio(), f.getHoraFin(), cambio);
         if (!java.util.Set.of("Pendiente","Aprobada","Rechazada").contains(f.getEstado())) throw new IllegalArgumentException("Estado no válido.");
+        validarActivacion(r, f.getEstado(), f.getFecha(), f.getHoraInicio(), f.getHoraFin());
         if (!"Rechazada".equals(f.getEstado())) {
             if (cambio && !"Disponible".equals(r.getServicio().getEstado())) throw new IllegalArgumentException("El espacio no está disponible.");
             validarCruce(r.getServicio().getId(), f.getFecha(), f.getHoraInicio(), f.getHoraFin(), r.getId());
@@ -116,6 +132,7 @@ public class ReservaService {
     public void cambiarEstado(Long id, String estado) {
         var r = bloquearReserva(id);
         if (!java.util.Set.of("Pendiente","Aprobada","Rechazada").contains(estado)) throw new IllegalArgumentException("Estado no válido.");
+        validarActivacion(r, estado, r.getFecha(), r.getHoraInicio(), r.getHoraFin());
         if (!"Rechazada".equals(estado)) validarCruce(r.getServicio().getId(),r.getFecha(),r.getHoraInicio(),r.getHoraFin(),r.getId());
         r.setEstado(estado); reservaRepository.saveAndFlush(r);
     }
@@ -130,7 +147,7 @@ public class ReservaService {
     public long obtenerReservasPendientesCount() { return reservaRepository.countByEstadoIgnoreCase("Pendiente"); }
 
     public double calcularIngresosTotales() {
-        // Conserva el indicador previo: total solicitado excepto reservas rechazadas.
+        // Sumamos las solicitudes vigentes; este indicador no representa pagos recibidos.
         return reservaRepository.findByEstadoNotIgnoreCase("Rechazada").stream()
                 .map(Reserva::getTotalDecimal).reduce(BigDecimal.ZERO, BigDecimal::add).doubleValue();
     }

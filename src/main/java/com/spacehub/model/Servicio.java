@@ -37,7 +37,7 @@ public class Servicio {
     @Column(nullable = false)
     private int capacidad;
     @Column(nullable = false, length = 20)
-    private String estado; // "Disponible" / "Ocupado"
+    private String estado; // Un espacio Ocupado no acepta nuevas solicitudes.
     @Column(name = "descripcion_corta", length = 200)
     private String descripcionCorta;
     @Column(columnDefinition = "TEXT")

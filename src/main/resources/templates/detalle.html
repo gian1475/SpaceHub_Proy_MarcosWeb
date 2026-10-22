@@ -10,10 +10,10 @@
 </head>
 <body>
 
-<!-- barra de navegacion / navbar -->
+<!-- El menú es compartido y muestra las opciones que permite la sesión. -->
 <th:block th:replace="~{fragments/header :: header('detalle')}"></th:block>
 
-<!-- contenido principal del detalle -->
+<!-- El aviso explica por qué no se pudo guardar una reserva. -->
 <div th:if="${error}" class="container alert alert-danger mt-3" role="alert" th:text="${error}"></div>
 <section class="py-4">
   <div class="container">
@@ -30,7 +30,7 @@
 
     <div class="row g-4">
       <div class="col-12 col-lg-8">
-        <!-- carrusel / galeria de fotos -->
+        <!-- Si el espacio no tiene fotos, mostramos un mensaje en lugar del carrusel. -->
         <div th:if="${#lists.isEmpty(servicio.imagenes)}" class="card p-5 text-center text-muted mb-4">Sin fotos disponibles</div>
         <div th:if="${!#lists.isEmpty(servicio.imagenes)}" id="carouselDetalle" class="carousel slide mb-4" data-bs-ride="carousel">
           <div class="carousel-indicators">
@@ -38,7 +38,7 @@
                     type="button"
                     data-bs-target="#carouselDetalle"
                     th:data-bs-slide-to="${iterStat.index}"
-                    th:classappend="${iterStat.first} ? 'active'"></button>
+                    th:classappend="${iterStat.first} ? 'active'" th:aria-label="${'Ver foto ' + (iterStat.index + 1)}"></button>
           </div>
           <div class="carousel-inner rounded-3">
             <div th:each="img, iterStat : ${servicio.imagenes}"
@@ -47,15 +47,15 @@
               <img th:src="${img}" class="d-block w-100" th:alt="${'Foto ' + (iterStat.index + 1)}" style="height: 380px; object-fit: cover;">
             </div>
           </div>
-          <button class="carousel-control-prev" type="button" data-bs-target="#carouselDetalle" data-bs-slide="prev">
+          <button class="carousel-control-prev" type="button" data-bs-target="#carouselDetalle" data-bs-slide="prev" aria-label="Foto anterior">
             <span class="carousel-control-prev-icon"></span>
           </button>
-          <button class="carousel-control-next" type="button" data-bs-target="#carouselDetalle" data-bs-slide="next">
+          <button class="carousel-control-next" type="button" data-bs-target="#carouselDetalle" data-bs-slide="next" aria-label="Foto siguiente">
             <span class="carousel-control-next-icon"></span>
           </button>
         </div>
 
-        <!-- descripcion del espacio y servicios -->
+        <!-- Las comodidades pertenecen al espacio que se está consultando. -->
         <div class="card p-4 mb-4">
           <h4 class="mb-3">Descripción del espacio</h4>
           <p class="text-muted" style="line-height: 1.8;" th:text="${servicio.descripcion}">
@@ -71,7 +71,7 @@
           </div>
         </div>
 
-        <!-- ubicacion referencial -->
+        <!-- La dirección y la referencia ayudan a ubicar el local. -->
         <div class="card p-4">
           <h5 class="mb-2">Ubicación referencial</h5>
           <p class="text-muted small" th:text="${servicio.referencia}">Referencia del espacio.</p>
@@ -82,7 +82,7 @@
         </div>
       </div>
 
-      <!-- tarjeta de precio y boton para abrir modal (sticky) -->
+      <!-- La tarifa queda a la vista mientras se revisa el detalle del espacio. -->
       <div class="col-12 col-lg-4">
         <div class="card p-4 sticky-top" style="top: 90px;">
           <span class="text-muted small">Precio por hora</span>
@@ -105,9 +105,10 @@
             </li>
           </ul>
 
-          <button type="button" class="btn btn-primary btn-lg w-100 mb-2" data-bs-toggle="modal" data-bs-target="#modalReserva">
+          <button type="button" class="btn btn-primary btn-lg w-100 mb-2" data-bs-toggle="modal" data-bs-target="#modalReserva" th:disabled="${servicio.estado != 'Disponible'}">
             <i class="bi bi-calendar-check me-1"></i> Solicitar Reserva
           </button>
+          <p th:if="${servicio.estado != 'Disponible'}" class="text-danger small">Este espacio no acepta nuevas reservas por el momento.</p>
           <p class="text-center text-muted small mb-0" style="font-size: 0.75rem;">
             No se requiere tarjeta de crédito para reservar.
           </p>
@@ -117,13 +118,13 @@
   </div>
 </section>
 
-<!-- ventana modal de reserva con formulario y calculadora -->
-<div class="modal fade" id="modalReserva" tabindex="-1">
+<!-- El navegador estima el total; el servidor lo vuelve a calcular al guardar. -->
+<div class="modal fade" id="modalReserva" tabindex="-1" aria-labelledby="tituloReserva" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Solicitud de Reserva</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <h5 class="modal-title" id="tituloReserva">Solicitud de Reserva</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
       </div>
       <div class="modal-body">
         <form th:action="@{/reservas}" method="POST" th:data-precio="${servicio.precioPorHora}">
@@ -135,7 +136,7 @@
           </div>
           <div class="mb-3">
             <label class="form-label small fw-bold">Fecha</label>
-            <input type="date" name="fecha" id="fechaReserva" class="form-control" required th:value="${reservaFecha}">
+            <input type="date" name="fecha" id="fechaReserva" class="form-control" required th:value="${reservaFecha}" th:min="${fechaMinima}">
           </div>
           <div class="row g-2 mb-3">
             <div class="col-6">
@@ -148,19 +149,19 @@
             </div>
           </div>
           <div class="p-2 bg-light border rounded mb-3 d-flex justify-content-between small">
-            <span>Tiempo: <strong id="textoHoras">4 hora(s)</strong></span>
-            <span>Total estimado: <strong id="totalPagar" class="text-success">S/ 180.00</strong></span>
+            <span>Tiempo: <strong id="textoHoras">Selecciona un horario</strong></span>
+            <span>Total estimado: <strong id="totalPagar" class="text-success">—</strong></span>
           </div>
           <p th:if="${session.usuarioId != null}" class="small text-muted">La solicitud se registrará a nombre de tu cuenta.</p>
           <p th:if="${session.usuarioId == null}" class="alert alert-info"><a th:href="@{/login}">Inicia sesión</a> para reservar este espacio.</p>
-          <button th:if="${session.usuarioId != null}" type="submit" class="btn btn-primary w-100">Enviar Solicitud</button>
+          <button th:if="${session.usuarioId != null and servicio.estado == 'Disponible'}" type="submit" class="btn btn-primary w-100">Enviar Solicitud</button>
         </form>
       </div>
     </div>
   </div>
 </div>
 
-<!-- pie de pagina / footer -->
+<!-- Usamos el mismo pie de página en todo el sitio. -->
 <footer th:replace="~{fragments/footer :: footer}"></footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

@@ -32,7 +32,7 @@ public class Reserva {
     public Usuario getUsuario() { return usuario; }
     public void setUsuario(Usuario usuario) { this.usuario = usuario; }
     @Column(nullable = false, length = 20)
-    private String estado; // "Pendiente" / "Aprobada" / "Rechazada"
+    private String estado; // Solo Pendiente y Aprobada bloquean el horario del espacio.
 
     public Reserva() {
     }

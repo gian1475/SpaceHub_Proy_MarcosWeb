@@ -27,6 +27,12 @@ public class ReservaForm {
     public void setHoraFin(LocalTime horaFin) { this.horaFin=horaFin; }
     public String getEstado() { return estado; }
     public void setEstado(String estado) { this.estado=estado; }
+    @AssertTrue(message="La reserva debe durar al menos una hora.")
+    public boolean isDuracionValida() {
+        return horaInicio == null || horaFin == null || !horaFin.isAfter(horaInicio)
+                || Duration.between(horaInicio, horaFin).compareTo(Duration.ofHours(1)) >= 0;
+    }
+
     @AssertTrue(message="La hora final debe ser posterior a la inicial.")
     public boolean isHorarioValido() { return horaInicio==null || horaFin==null || horaFin.isAfter(horaInicio); }
 }

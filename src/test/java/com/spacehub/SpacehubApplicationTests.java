@@ -58,7 +58,7 @@ class SpacehubApplicationTests {
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/contacto")
                 .param("nombre","Cliente Prueba").param("correo","cliente@example.com").param("motivo","reserva").param("mensaje","Consulta de disponibilidad de un espacio."))
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl("/contacto"))
-                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash().attribute("mensaje","Datos validados. Para enviar tu consulta, utiliza nuestros canales de contacto."));
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash().attribute("mensaje","Datos validados. Este formulario de demostración no envía ni guarda mensajes."));
     }
 
     @Test
@@ -183,7 +183,7 @@ class SpacehubApplicationTests {
         var espacio = new com.spacehub.model.Servicio(null,"Espacio sesion",categoria,"Lima","Direccion","",20,5,"Disponible","","",new java.util.ArrayList<>(),null);
         entityManager.persist(espacio); entityManager.flush();
         var otro = new com.spacehub.model.Usuario(null,"Otro","Cliente","otro@example.com","999000001","demo12345",rol); entityManager.persist(otro); entityManager.flush();
-        reservaService.crearReserva(espacio.getId(),otro.getId(),java.time.LocalDate.of(2026,12,1),java.time.LocalTime.of(9,0),java.time.LocalTime.of(10,0));
+        reservaService.crearReserva(espacio.getId(),otro.getId(),java.time.LocalDate.now(java.time.ZoneId.of("America/Lima")).plusDays(30),java.time.LocalTime.of(9,0),java.time.LocalTime.of(10,0));
         libre.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/reservas").session(conectada)
                 .param("_csrf",(String)conectada.getAttribute("csrf")).param("servicioId",espacio.getId().toString())
                 .param("fecha","2026-12-02").param("horaInicio","10:00").param("horaFin","11:00")
@@ -267,7 +267,7 @@ class SpacehubApplicationTests {
         }
         var rol = new com.spacehub.model.Rol(null, "CLIENTE_CRUD"); entityManager.persist(rol);
         var usuario = new com.spacehub.model.Usuario(null,"Cliente","Prueba","crud@example.com","999000000","demo12345",rol); entityManager.persist(usuario);
-        var reserva = new com.spacehub.model.Reserva(null,espacio,"","",java.time.LocalDate.of(2026,12,1),java.time.LocalTime.of(10,0),java.time.LocalTime.of(11,0),40.25,"Pendiente");
+        var reserva = new com.spacehub.model.Reserva(null,espacio,"","",java.time.LocalDate.now(java.time.ZoneId.of("America/Lima")).plusDays(30),java.time.LocalTime.of(10,0),java.time.LocalTime.of(11,0),40.25,"Pendiente");
         reserva.setUsuario(usuario); entityManager.persist(reserva); entityManager.flush();
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/admin/servicios/eliminar/"+id))
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash().attributeExists("error"));
@@ -356,7 +356,7 @@ class SpacehubApplicationTests {
         org.junit.jupiter.api.Assertions.assertTrue(usuarioService.validarLogin("nuevo@example.com", "incorrecta").isEmpty());
         org.junit.jupiter.api.Assertions.assertEquals(1, servicioService.filtrarPorCategoria("categoria bd").size());
         org.junit.jupiter.api.Assertions.assertEquals("Espacio desde BD", servicioService.obtenerDestacados().get(0).getNombre());
-        var fecha = java.time.LocalDate.of(2026, 12, 1);
+        var fecha = java.time.LocalDate.now(java.time.ZoneId.of("America/Lima")).plusDays(30);
         var inicio = java.time.LocalTime.of(10, 0);
         var fin = java.time.LocalTime.of(11, 30);
         var reserva = reservaService.crearReserva(servicio.getId(), usuarioService.validarLogin("nuevo@example.com", "demo12345").orElseThrow().getId(), fecha, inicio, fin);
@@ -402,7 +402,7 @@ class SpacehubApplicationTests {
         servicio.setImagenesPersistidas(java.util.List.of(imagen));
         entityManager.persist(servicio);
         var reserva = new com.spacehub.model.Reserva(null, servicio, "", "",
-                java.time.LocalDate.of(2026, 12, 1), java.time.LocalTime.of(10, 0),
+                java.time.LocalDate.now(java.time.ZoneId.of("America/Lima")).plusDays(30), java.time.LocalTime.of(10, 0),
                 java.time.LocalTime.of(12, 0), 91.00, "Pendiente");
         reserva.setUsuario(usuario);
         entityManager.persist(reserva);
@@ -422,5 +422,153 @@ class SpacehubApplicationTests {
 	@Test
 	void contextLoads() {
 	}
+
+
+    @Test
+    @org.springframework.transaction.annotation.Transactional
+    void consultasConDtoYCascadasEnDosPaginas() throws Exception {
+        var categoriaA = new com.spacehub.model.Categoria(null, "Categoria A consulta", "bi-house", "");
+        var categoriaB = new com.spacehub.model.Categoria(null, "Categoria B consulta", "bi-house", "");
+        var vacia = new com.spacehub.model.Categoria(null, "Categoria sin espacios", "bi-house", "");
+        entityManager.persist(categoriaA); entityManager.persist(categoriaB); entityManager.persist(vacia);
+        var a = new com.spacehub.model.Servicio(null, "Espacio A consulta", categoriaA, "Lima", "Direccion", "", 25, 5, "Disponible", "", "", new java.util.ArrayList<>(), null);
+        var b = new com.spacehub.model.Servicio(null, "Espacio B consulta", categoriaB, "Lima", "Direccion", "", 30, 5, "Disponible", "", "", new java.util.ArrayList<>(), null);
+        entityManager.persist(a); entityManager.persist(b); entityManager.flush();
+        var fecha = java.time.LocalDate.now(java.time.ZoneId.of("America/Lima")).plusDays(3);
+        reservaService.crearReserva(a.getId(), adminPruebas, fecha, java.time.LocalTime.of(10,0), java.time.LocalTime.of(11,30));
+        reservaService.crearReserva(b.getId(), adminPruebas, fecha, java.time.LocalTime.of(10,0), java.time.LocalTime.of(11,0));
+        entityManager.flush(); entityManager.clear();
+        var listado = reservaService.consultarListado(categoriaA.getId(), a.getId());
+        org.junit.jupiter.api.Assertions.assertEquals(1, listado.size());
+        var dto = listado.get(0);
+        org.junit.jupiter.api.Assertions.assertEquals("Admin Prueba", dto.getClienteNombre());
+        org.junit.jupiter.api.Assertions.assertEquals("admin-test@example.com", dto.getClienteCorreo());
+        org.junit.jupiter.api.Assertions.assertEquals("Espacio A consulta", dto.getEspacioNombre());
+        org.junit.jupiter.api.Assertions.assertEquals("Categoria A consulta", dto.getCategoriaNombre());
+        org.junit.jupiter.api.Assertions.assertEquals(new java.math.BigDecimal("37.50"), dto.getTotal());
+        org.junit.jupiter.api.Assertions.assertEquals("1 h 30 min", dto.getDuracionTexto());
+        org.junit.jupiter.api.Assertions.assertEquals(2, reservaService.consultarListado(null, null).size());
+        org.junit.jupiter.api.Assertions.assertTrue(reservaService.consultarListado(vacia.getId(), null).isEmpty());
+        for (String ruta : java.util.List.of("/servicios", "/admin/reservas")) {
+            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(ruta))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.model().attribute("espaciosFiltro", org.hamcrest.Matchers.empty()));
+            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(ruta)
+                    .param("categoriaId", categoriaA.getId().toString()).param("espacioId", a.getId().toString()))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.model().attribute("espaciosFiltro", org.hamcrest.Matchers.hasSize(1)))
+                                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("Espacio B consulta"))));
+            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(ruta).param("categoriaId", vacia.getId().toString()))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().string(org.hamcrest.Matchers.containsString("No hay espacios en esta categoría")));
+            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(ruta)
+                    .param("categoriaId", categoriaA.getId().toString()).param("espacioId", b.getId().toString()))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
+            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(ruta).param("espacioId", a.getId().toString()))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
+            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(ruta).param("categoriaId", "-1"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
+        }
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/servicios").param("categoria", categoriaA.getNombre()))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.model().attribute("categoriaId", categoriaA.getId()));
+        var publico = org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup(webContext).build();
+        publico.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/servicios").param("categoriaId", categoriaA.getId().toString()))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
+        publico.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/admin/reservas").param("categoriaId", categoriaA.getId().toString()))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl("/login"));
+    }
+
+    private com.spacehub.model.Servicio espacioParaRevision() {
+        var categoria = new com.spacehub.model.Categoria(null, "Revision de reservas", "bi-house", "");
+        entityManager.persist(categoria);
+        var espacio = new com.spacehub.model.Servicio(null, "Espacio de revision", categoria,
+                "Lima", "Direccion", "", 45.50, 10, "Disponible", "", "",
+                new java.util.ArrayList<>(), null);
+        entityManager.persist(espacio);
+        entityManager.flush();
+        return espacio;
+    }
+
+    @Test
+    @org.springframework.transaction.annotation.Transactional
+    void reservaExigeUnaHoraEnServicioYFormulario() throws Exception {
+        var espacio = espacioParaRevision();
+        var fecha = java.time.LocalDate.now(java.time.ZoneId.of("America/Lima")).plusDays(2);
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+                () -> reservaService.crearReserva(espacio.getId(), adminPruebas, fecha,
+                        java.time.LocalTime.of(10, 0), java.time.LocalTime.of(10, 59)));
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/reservas")
+                .param("servicioId", espacio.getId().toString()).param("fecha", fecha.toString())
+                .param("horaInicio", "10:00").param("horaFin", "10:59"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash().attributeExists("error"));
+        org.junit.jupiter.api.Assertions.assertEquals(0, reservaService.obtenerTotalReservas());
+        var reserva = reservaService.crearReserva(espacio.getId(), adminPruebas, fecha,
+                java.time.LocalTime.of(10, 0), java.time.LocalTime.of(11, 0));
+        org.junit.jupiter.api.Assertions.assertEquals(new java.math.BigDecimal("45.50"), reserva.getTotalDecimal());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/admin/reservas/guardar")
+                .param("id", reserva.getId().toString()).param("fecha", fecha.toString())
+                .param("horaInicio", "10:00").param("horaFin", "10:30").param("estado", "Pendiente"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.model()
+                        .attributeHasFieldErrors("reservaForm", "duracionValida"));
+    }
+
+    @Test
+    @org.springframework.transaction.annotation.Transactional
+    void noApruebaNiReactivaReservasPasadasODeEspaciosOcupados() throws Exception {
+        var espacio = espacioParaRevision();
+        var fecha = java.time.LocalDate.now(java.time.ZoneId.of("America/Lima")).plusDays(2);
+        var reserva = reservaService.crearReserva(espacio.getId(), adminPruebas, fecha,
+                java.time.LocalTime.of(10, 0), java.time.LocalTime.of(11, 0));
+        reservaService.cambiarEstado(reserva.getId(), "Rechazada");
+        espacio.setEstado("Ocupado");
+        entityManager.flush();
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/admin/reservas/estado/" + reserva.getId())
+                .param("estado", "Aprobada"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash().attributeExists("error"));
+        var form = reservaService.formulario(reserva.getId());
+        form.setEstado("Pendiente");
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> reservaService.editar(form));
+        org.junit.jupiter.api.Assertions.assertEquals("Rechazada", reserva.getEstado());
+        espacio.setEstado("Disponible");
+        reserva.setFecha(fecha.minusDays(4));
+        entityManager.flush();
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+                () -> reservaService.cambiarEstado(reserva.getId(), "Aprobada"));
+        form.setFecha(reserva.getFecha());
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> reservaService.editar(form));
+        org.junit.jupiter.api.Assertions.assertEquals("Rechazada", reserva.getEstado());
+        reservaService.cambiarEstado(reserva.getId(), "Rechazada");
+    }
+
+    @Test
+    void cuentasDelSeedTienenHashYConservanSusClavesDeDemostracion() throws Exception {
+        String sql = java.nio.file.Files.readString(java.nio.file.Path.of("database", "02_seed.sql"));
+        var hashes = java.util.regex.Pattern.compile("'(\\$2[aby]\\$[^']+)'").matcher(sql);
+        var encoder = new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder();
+        int cantidad = 0;
+        while (hashes.find()) {
+            org.junit.jupiter.api.Assertions.assertTrue(
+                    encoder.matches(cantidad == 0 ? "admin123" : "demo12345", hashes.group(1)));
+            cantidad++;
+        }
+        org.junit.jupiter.api.Assertions.assertEquals(4, cantidad);
+        org.junit.jupiter.api.Assertions.assertFalse(sql.contains("'admin123'"));
+        org.junit.jupiter.api.Assertions.assertFalse(sql.contains("'demo12345'"));
+    }
+
+    @Test
+    void paginasDeErrorYDetalleInexistenteRespondenSinExponerDetallesInternos() throws Exception {
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/servicios/-1"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isNotFound());
+        for (int codigo : new int[] {400, 404, 500}) {
+            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/error")
+                    .accept(org.springframework.http.MediaType.TEXT_HTML)
+                    .requestAttr(jakarta.servlet.RequestDispatcher.ERROR_STATUS_CODE, codigo))
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().is(codigo))
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content()
+                            .string(org.hamcrest.Matchers.containsString("Ver catálogo")));
+        }
+    }
 
 }

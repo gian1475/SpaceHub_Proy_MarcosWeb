@@ -1,4 +1,4 @@
--- Ejecutar despues del esquema y los datos iniciales.
+-- Revisamos las tablas, sus registros y las relaciones después de importar los datos.
 USE spacehub_db;
 SHOW TABLES;
 SELECT 'roles' AS tabla, COUNT(*) AS cantidad FROM roles

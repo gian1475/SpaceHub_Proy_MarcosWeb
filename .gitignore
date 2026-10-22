@@ -4,7 +4,7 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 
-### STS ###
+# Archivos locales de Spring Tool Suite.
 .apt_generated
 .classpath
 .factorypath
@@ -13,13 +13,13 @@ target/
 .springBeans
 .sts4-cache
 
-### IntelliJ IDEA ###
+# Preferencias de IntelliJ IDEA.
 .idea
 *.iws
 *.iml
 *.ipr
 
-### NetBeans ###
+# Carpetas de trabajo y compilación de NetBeans.
 /nbproject/private/
 /nbbuild/
 /dist/
@@ -29,5 +29,11 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 
-### VS Code ###
+# Preferencias personales de VS Code.
 .vscode/
+
+# Las credenciales y los registros locales quedan fuera del repositorio.
+.env
+.env.*
+!.env.example
+*.log

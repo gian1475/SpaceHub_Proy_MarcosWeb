@@ -1,5 +1,5 @@
--- SpaceHub - Fase 1. MySQL 8.0.16 o posterior.
--- No elimina datos. IF NOT EXISTS no actualiza tablas preexistentes.
+-- Creamos las tablas y sus relaciones para MySQL 8.0.16 o posterior.
+-- Las tablas existentes se conservan; este archivo no cambia su estructura.
 SET NAMES utf8mb4;
 
 CREATE DATABASE IF NOT EXISTS spacehub_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

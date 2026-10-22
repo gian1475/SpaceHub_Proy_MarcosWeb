@@ -1,55 +1,52 @@
-// 1. buscador de espacios en el catalogo
+// Buscamos solo en las tarjetas del catálogo y avisamos si ninguna coincide.
 function buscarLocal() {
-  let texto = document.getElementById("inputBuscar").value.toLowerCase();
-  let tarjetas = document.querySelectorAll(".col-12.col-md-6.col-lg-4");
-  tarjetas.forEach(function (col) {
-    let contenido = col.innerText.toLowerCase();
-    col.style.display = contenido.includes(texto) ? "block" : "none";
+  const entrada = document.getElementById("inputBuscar");
+  if (!entrada) return;
+  const normalizar = valor => valor.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  const texto = normalizar(entrada.value);
+  const tarjetas = document.querySelectorAll("[data-espacio-tarjeta]");
+  let visibles = 0;
+  tarjetas.forEach(tarjeta => {
+    tarjeta.hidden = !normalizar(tarjeta.textContent).includes(texto);
+    if (!tarjeta.hidden) visibles++;
   });
+  const aviso = document.getElementById("sinCoincidencias");
+  if (aviso) aviso.hidden = tarjetas.length === 0 || visibles > 0;
 }
 
-// 2. calculadora de precio en vivo para el modal
+// La tarifa viene del espacio abierto; el servidor confirma el importe al guardar.
 function calcularTotal() {
-  let formReserva = document.querySelector("#modalReserva form");
-  let precioHora = 45;
-
-  if (formReserva && formReserva.dataset.precio) {
-    precioHora = parseFloat(formReserva.dataset.precio);
-  } else {
-    let elemPrecio = document.getElementById("precioServicio");
-    if (elemPrecio && elemPrecio.dataset.precio) {
-      precioHora = parseFloat(elemPrecio.dataset.precio);
-    }
-  }
-
-  let horaInElem = document.getElementById("horaInicio");
-  let horaOutElem = document.getElementById("horaFin");
-  if (!horaInElem || !horaOutElem) return;
-
-  const minutos = (valor) => {
+  const formulario = document.querySelector("#modalReserva form");
+  const precio = document.getElementById("precioServicio");
+  const tarifaTexto = formulario?.dataset.precio ?? precio?.dataset.precio;
+  const tarifa = tarifaTexto ? Number(tarifaTexto) : NaN;
+  const inicio = document.getElementById("horaInicio");
+  const fin = document.getElementById("horaFin");
+  if (!inicio || !fin) return;
+  const minutos = valor => {
     if (!/^\d{2}:\d{2}$/.test(valor)) return NaN;
-    const [horas, minutos] = valor.split(":").map(Number);
-    return horas * 60 + minutos;
+    const [hora, minuto] = valor.split(":").map(Number);
+    return hora < 24 && minuto < 60 ? hora * 60 + minuto : NaN;
   };
-  const duracion = minutos(horaOutElem.value) - minutos(horaInElem.value);
-  const totalHoras = duracion / 60;
-
-  let textoHorasElem = document.getElementById("textoHoras");
-  let totalPagarElem = document.getElementById("totalPagar");
-
-  if (totalHoras > 0) {
-    let monto = totalHoras * precioHora;
-    if (textoHorasElem) textoHorasElem.innerText = Math.floor(duracion / 60) + " h " + (duracion % 60) + " min";
-    if (totalPagarElem) totalPagarElem.innerText = "S/ " + monto.toFixed(2);
-  } else {
-    if (textoHorasElem) textoHorasElem.innerText = "Horario inv\u00e1lido";
-    if (totalPagarElem) totalPagarElem.innerText = "S/ 0.00";
+  const duracion = minutos(fin.value) - minutos(inicio.value);
+  const horarioValido = Number.isFinite(duracion) && duracion >= 60;
+  fin.setCustomValidity(horarioValido ? "" : "La reserva debe durar al menos una hora y terminar el mismo día.");
+  const textoHoras = document.getElementById("textoHoras");
+  const total = document.getElementById("totalPagar");
+  if (textoHoras) textoHoras.textContent = horarioValido
+    ? Math.floor(duracion / 60) + " h " + (duracion % 60) + " min"
+    : "Mínimo 1 hora";
+  if (total) {
+    // Trabajamos con céntimos para que el redondeo coincida con el cálculo del servidor.
+    const centimos = Number.isFinite(tarifa) && tarifa >= 1
+      ? Math.round(Math.round(tarifa * 100) * duracion / 60) : NaN;
+    total.textContent = horarioValido && Number.isFinite(centimos)
+      ? "S/ " + (centimos / 100).toFixed(2) : "—";
   }
 }
 
-// Ejecutar al cargar la página si existen los elementos
-document.addEventListener("DOMContentLoaded", function () {
-  if (document.getElementById("horaInicio") && document.getElementById("horaFin")) {
-    calcularTotal();
-  }
+// Mostramos la estimación inicial cuando el formulario está listo.
+document.addEventListener("DOMContentLoaded", () => {
+  calcularTotal();
+  buscarLocal();
 });
