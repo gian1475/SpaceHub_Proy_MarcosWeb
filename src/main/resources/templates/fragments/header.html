@@ -9,7 +9,7 @@
       <a class="navbar-brand" th:href="@{/}">
         <i class="bi bi-building"></i> SpaceHub
       </a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menu">
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menu" aria-controls="menu" aria-expanded="false" aria-label="Abrir menú">
         <span class="navbar-toggler-icon"></span>
       </button>
       <div class="collapse navbar-collapse" id="menu">
@@ -39,7 +39,7 @@
     </div>
   </nav>
 
-  <!-- Alerta Flash si existe un mensaje -->
+  <!-- El aviso aparece después de guardar o completar una acción. -->
   <div th:if="${mensaje}" class="container mt-3">
     <div class="alert alert-success alert-dismissible fade show mb-0" role="alert">
       <i class="bi bi-check-circle-fill me-2"></i><span th:text="${mensaje}">Mensaje de éxito</span>

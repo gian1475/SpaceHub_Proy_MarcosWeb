@@ -28,7 +28,7 @@ public class UsuarioService {
         String nombreRol = "propietario".equalsIgnoreCase(tipo) ? "PROPIETARIO" : "CLIENTE";
         var rol = rolRepository.findByNombre(nombreRol)
                 .orElseThrow(() -> new IllegalStateException("Faltan los roles iniciales. Ejecute el script de datos."));
-        // Las cuentas nuevas siempre usan hash.
+        // Guardamos el hash para no conservar la contraseña escrita por el usuario.
         usuarioRepository.save(new Usuario(null, nombres, apellidos,
                 correo.trim().toLowerCase(Locale.ROOT), telefono, encoder.encode(password), rol));
         return true;
@@ -48,7 +48,7 @@ public class UsuarioService {
         if (guardada.startsWith("$2")) {
             return encoder.matches(password, guardada) ? encontrado : Optional.empty();
         }
-        // Migracion progresiva de cuentas existentes, solo tras verificar la clave anterior.
+        // Las cuentas antiguas pasan a BCrypt cuando su dueño inicia sesión correctamente.
         if (!java.security.MessageDigest.isEqual(password.getBytes(java.nio.charset.StandardCharsets.UTF_8),
                 guardada.getBytes(java.nio.charset.StandardCharsets.UTF_8))) return Optional.empty();
         usuario.setPassword(encoder.encode(password));

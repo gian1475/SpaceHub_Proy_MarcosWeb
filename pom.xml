@@ -6,7 +6,7 @@
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
 		<version>3.3.4</version>
-		<relativePath/> <!-- lookup parent from repository -->
+		<relativePath/> <!-- Maven obtiene la configuración de Spring Boot desde su repositorio. -->
 	</parent>
 	<groupId>com.spacehub</groupId>
 	<artifactId>spacehub</artifactId>

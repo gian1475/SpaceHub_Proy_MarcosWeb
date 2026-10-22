@@ -10,10 +10,10 @@
 </head>
 <body>
 
-<!-- barra de navegacion / navbar -->
+<!-- El menú es compartido y muestra las opciones que permite la sesión. -->
 <th:block th:replace="~{fragments/header :: header('admin')}"></th:block>
 
-<!-- panel de control / admin -->
+<!-- Desde aquí el administrador revisa los espacios y las solicitudes. -->
 <section class="py-4">
   <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -28,7 +28,7 @@
 
     <div class="mb-4"><a class="btn btn-outline-dark" th:href="@{/admin/categorias}"><i class="bi bi-tags me-1"></i> Gestionar categorías</a> <a class="btn btn-outline-dark" th:href="@{/admin/servicios}">Gestionar espacios</a> <a class="btn btn-outline-dark" th:href="@{/admin/reservas}">Gestionar reservas</a></div>
 
-    <!-- tarjetas de metricas -->
+    <!-- Estos valores se calculan con los registros guardados en la base. -->
     <div class="row g-3 mb-4">
       <div class="col-6 col-md-3">
         <div class="card p-3 text-center">
@@ -56,7 +56,7 @@
       </div>
     </div>
 
-    <!-- tabla de reservas recientes -->
+    <!-- Mostramos primero las solicitudes registradas más recientemente. -->
     <div class="card mb-4">
       <div class="card-header bg-white py-3">
         <h5 class="mb-0"><i class="bi bi-calendar-check me-2"></i> Solicitudes de Reserva Recientes</h5>
@@ -99,7 +99,7 @@
       </div>
     </div>
 
-    <!-- tabla de espacios registrados -->
+    <!-- Cada fila permite revisar un espacio antes de editarlo. -->
     <div class="card">
       <div class="card-header bg-white py-3">
         <h5 class="mb-0"><i class="bi bi-building me-2"></i> Espacios Registrados</h5>
@@ -136,7 +136,7 @@
   </div>
 </section>
 
-<!-- pie de pagina / footer -->
+<!-- Usamos el mismo pie de página en todo el sitio. -->
 <footer class="py-4">
   <div class="container">
     <p class="text-center small mb-0">

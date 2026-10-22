@@ -10,10 +10,10 @@
 </head>
 <body>
 
-<!-- barra de navegacion / navbar -->
+<!-- El menú es compartido y muestra las opciones que permite la sesión. -->
 <th:block th:replace="~{fragments/header :: header('registro')}"></th:block>
 
-<!-- formulario de registro (card) -->
+<!-- Los errores vuelven al formulario para que la persona corrija sus datos. -->
 <section class="py-5">
   <div class="container">
     <div class="row justify-content-center">
@@ -22,10 +22,10 @@
           <div class="text-center mb-4">
             <i class="bi bi-person-plus-fill fs-1 text-secondary"></i>
             <h3 class="mt-2">Crear Cuenta</h3>
-            <p class="text-muted small">Regístrate para reservar o publicar espacios.</p>
+            <p class="text-muted small">Crea una cuenta para consultar y reservar espacios.</p>
           </div>
 
-          <!-- Alerta de error si el correo ya existe -->
+          <!-- Mostramos el aviso cuando no se pudo completar el registro. -->
           <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
             <i class="bi bi-exclamation-triangle-fill me-2"></i><span th:text="${error}">Error</span>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -36,36 +36,37 @@
             <div th:if="${#fields.hasAnyErrors()}" class="alert alert-danger" role="alert"><ul class="mb-0"><li th:each="err : ${#fields.allErrors()}" th:text="${err}"></li></ul></div>
             <div class="row g-2 mb-3">
               <div class="col-6">
-                <label class="form-label small fw-bold">Nombre</label>
+                <label class="form-label small fw-bold" for="nombres">Nombre</label>
                 <input type="text" th:field="*{nombres}" th:errorclass="is-invalid" class="form-control" placeholder="Gerardo" required><div class="invalid-feedback" th:errors="*{nombres}"></div>
               </div>
               <div class="col-6">
-                <label class="form-label small fw-bold">Apellidos</label>
+                <label class="form-label small fw-bold" for="apellidos">Apellidos</label>
                 <input type="text" th:field="*{apellidos}" th:errorclass="is-invalid" class="form-control" placeholder="Guevara" required><div class="invalid-feedback" th:errors="*{apellidos}"></div>
               </div>
             </div>
             <div class="mb-3">
-              <label class="form-label small fw-bold">Correo electrónico</label>
+              <label class="form-label small fw-bold" for="correo">Correo electrónico</label>
               <input type="email" th:field="*{correo}" th:errorclass="is-invalid" class="form-control" placeholder="tu@correo.com" required><div class="invalid-feedback" th:errors="*{correo}"></div>
             </div>
             <div class="mb-3">
-              <label class="form-label small fw-bold">Teléfono / WhatsApp</label>
+              <label class="form-label small fw-bold" for="telefono">Teléfono / WhatsApp</label>
               <input type="tel" th:field="*{telefono}" th:errorclass="is-invalid" class="form-control" placeholder="987654321" required><div class="invalid-feedback" th:errors="*{telefono}"></div>
             </div>
             <div class="mb-3">
-              <label class="form-label small fw-bold">Tipo de cuenta</label>
+              <label class="form-label small fw-bold" for="tipo">Tipo de cuenta</label>
               <select th:field="*{tipo}" th:errorclass="is-invalid" class="form-select">
                 <option value="cliente">Cliente (Quiero alquilar espacios)</option>
-                <option value="propietario">Propietario (Quiero publicar locales)</option>
+                <option value="propietario">Propietario</option>
               </select><div class="invalid-feedback" th:errors="*{tipo}"></div>
+              <p class="form-text">Los propietarios pueden reservar. La publicación de espacios se gestiona desde administración.</p>
             </div>
             <div class="mb-3">
               <label class="form-label small fw-bold">Contraseña</label>
               <input type="password" name="password" th:classappend="${#fields.hasErrors('password')} ? 'is-invalid'" minlength="8" maxlength="72" class="form-control" placeholder="••••••••" required><div class="invalid-feedback" th:errors="*{password}"></div>
             </div>
             <div class="mb-3 form-check">
-              <input type="checkbox" class="form-check-input" id="terminos" name="terminos" value="true" required>
-              <label class="form-check-label small" for="terminos">Acepto los términos y condiciones</label>
+              <input type="checkbox" class="form-check-input" th:field="*{terminos}" required>
+              <label class="form-check-label small" for="terminos">Entiendo que esta es una demostración académica y que las reservas requieren aprobación</label>
             </div>
             <button type="submit" class="btn btn-primary w-100 mb-3">Crear Cuenta</button>
             <p class="text-center small text-muted mb-0">
@@ -78,7 +79,7 @@
   </div>
 </section>
 
-<!-- pie de pagina / footer -->
+<!-- Usamos el mismo pie de página en todo el sitio. -->
 <footer th:replace="~{fragments/footer :: footer}"></footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

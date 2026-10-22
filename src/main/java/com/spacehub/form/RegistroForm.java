@@ -27,7 +27,7 @@ public class RegistroForm {
     public void setPassword(String valor) { this.password = valor; }
     @AssertTrue(message="La contrase\u00f1a supera los 72 bytes UTF-8 admitidos.")
     public boolean isPasswordLongitudValida() { return password == null || password.getBytes(java.nio.charset.StandardCharsets.UTF_8).length <= 72; }
-    @AssertTrue(message="Acepta los términos y condiciones.")
+    @AssertTrue(message="Confirma que entiendes el funcionamiento de esta demostración.")
     private boolean terminos;
     public boolean isTerminos() { return terminos; }
     public void setTerminos(boolean terminos) { this.terminos = terminos; }

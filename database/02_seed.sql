@@ -1,6 +1,6 @@
--- SOLO para una base recien creada y vacia. Ejecutar una vez.
+-- Cargamos estos ejemplos una sola vez, después de crear las tablas vacías.
 
--- IDs explicitos: no ejecutar sobre datos propios. Sin INSERT IGNORE ni reemplazos.
+-- Los IDs conectan los ejemplos entre sí; no ejecutes este archivo sobre tus datos.
 
 SET NAMES utf8mb4;
 
@@ -84,13 +84,13 @@ INSERT INTO servicio_imagenes (id, servicio_id, url) VALUES
 (18, 6, 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1000&q=80');
 
 
--- Usuarios ficticios locales. Passwords temporales en texto plano para el login actual; migrar a hash en fase 6. No usar en produccion.
+-- Estas cuentas son para la demostración local. Sus claves de acceso figuran en la guía.
 
 INSERT INTO usuarios (id, nombres, apellidos, correo, telefono, password, rol_id) VALUES
-(1, 'Admin', 'SpaceHub', 'admin@spacehub.pe', '999888777', 'admin123', 1),
-(2, 'Gerardo', 'Guevara', 'gerardo@correo.com', '999000001', 'demo12345', 2),
-(3, 'Juan De Dios', 'Chiu', 'juan@correo.com', '999000002', 'demo12345', 2),
-(4, 'Jahyre', 'Turin', 'jahyre@correo.com', '999000003', 'demo12345', 2);
+(1, 'Admin', 'SpaceHub', 'admin@spacehub.pe', '999888777', '$2a$12$LKVyWWE6DfoW/S62biiFneWJDy8ceJ4hi/CTumCGY2bfpGfoOYA5G', 1),
+(2, 'Gerardo', 'Guevara', 'gerardo@correo.com', '999000001', '$2a$12$E85ef72hOQ9UCeTiwn2zkOOIwZ7pS2D58jyjWt5WDNQ0Qpk5gNADC', 2),
+(3, 'Juan De Dios', 'Chiu', 'juan@correo.com', '999000002', '$2a$12$o5ImrmgR1a1A7sDmNY8wB.DYvKmGqpt44mPhubv9G5LxPXswl1LtG', 2),
+(4, 'Jahyre', 'Turin', 'jahyre@correo.com', '999000003', '$2a$12$eb3bmioLtx0gIcTwB4u.4uULu2jrXkjlcF4v57haVtmlwTaj9hNdO', 2);
 
 
 INSERT INTO reservas (id, servicio_id, usuario_id, fecha, hora_inicio, hora_fin, total, estado) VALUES

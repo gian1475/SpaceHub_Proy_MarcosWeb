@@ -1,3 +1,5 @@
+http://localhost:8080
+
 # SpaceHub Guía del avance 3 y ejecución
 
 Esta guía explica lo que implementamos y cómo ejecutar SpaceHub desde VS Code, PowerShell y MySQL Workbench en Windows.
@@ -47,7 +49,7 @@ Conectamos Nuevo Espacio al backend y agregamos listado, edición y eliminación
 
 Agregamos validaciones de registro, login y cierre de sesión. Solo ADMIN accede a `/administracion` y `/admin/**`. Cada cliente ve únicamente sus reservas y las solicitudes se vinculan al usuario conectado.
 
-Las cuentas nuevas guardan la contraseña con hash BCrypt. Las cuentas antiguas en texto plano se convierten después de un login correcto, sin cambiar la contraseña de acceso. Los formularios POST usan protección CSRF y la sesión vence tras 30 minutos de inactividad.
+Las cuentas nuevas y las cuentas del seed guardan la contraseña con hash BCrypt. Las cuentas antiguas en texto plano se convierten después de un login correcto, sin cambiar la contraseña de acceso. Los formularios POST usan protección CSRF y la sesión vence tras 30 minutos de inactividad.
 
 PROPIETARIO conserva el acceso ordinario de cliente; su panel propio no está implementado. Se usa el módulo de criptografía de Spring Security; la integración completa de Spring Security y JWT queda para la entrega 4.
 
@@ -56,7 +58,8 @@ PROPIETARIO conserva el acceso ordinario de cliente; su panel propio no está im
 Agregamos listado administrativo, edición de fecha y horario, aprobación, rechazo y eliminación con confirmación.
 
 - Las nuevas solicitudes deben comenzar en el futuro, según America/Lima.
-- La hora final debe ser posterior a la inicial; no se admiten intervalos que crucen medianoche.
+- La reserva dura al menos una hora; no se admiten intervalos que crucen medianoche.
+- Aprobar o reactivar una reserva exige un horario futuro y un espacio Disponible.
 - Pendiente y Aprobada bloquean el horario; Rechazada lo libera.
 - Se permiten intervalos consecutivos: 10:00–11:00 y 11:00–12:00.
 - La comprobación de cruces usa transacciones y bloqueo del espacio para coordinar solicitudes simultáneas.
@@ -70,13 +73,11 @@ Comprobamos persistencia, CRUD, sesiones, permisos, validaciones y solicitudes s
 
 También validamos contacto. **El formulario de contacto es demostrativo: no envía ni guarda mensajes.**
 
-La última ejecución de `verify` registró **13 pruebas sin fallos ni errores** y generó el JAR. Las pruebas automáticas usan H2 aislado; los flujos con MySQL se comprobaron durante las pruebas locales con el usuario.
-
-Los archivos `FASE_2.md` a `FASE_8.md` documentan el avance histórico. Para el funcionamiento actual, utiliza esta guía.
+Las pruebas automáticas usan H2 aislado. El resultado de cada ejecución queda en `target/surefire-reports/`. La revisión funcional con MySQL y la revisión visual deben comprobarse por separado.
 
 ## 2. Requisitos
 
-- JDK 17 o superior. El proyecto está configurado para Java 17 y también se probó con JDK 21.
+- JDK 17 o superior. El proyecto está configurado para Java 17 y se verificó con JDK 24.
 - MySQL 8.0.16 o posterior, para aplicar las restricciones CHECK.
 - MySQL Workbench para importar y consultar la base.
 - VS Code y una terminal PowerShell en la carpeta del proyecto.
@@ -126,12 +127,12 @@ Deben existir siete tablas y seis claves foráneas. Las cantidades cambian si ya
 
 ## 4. Encender MySQL
 
-En este equipo el servicio se llama `MySQL95`. Abre PowerShell **como administrador** y ejecuta:
+El nombre del servicio depende de tu instalación. Búscalo con `Get-Service -Name '*mysql*'`. Si se llama `MYSQL80`, abre PowerShell como administrador y ejecuta:
 
 ```powershell
-Get-Service -Name MySQL95
-Start-Service -Name MySQL95
-Get-Service -Name MySQL95
+Get-Service -Name MYSQL80
+Start-Service -Name MYSQL80
+Get-Service -Name MYSQL80
 ```
 
 Debe aparecer `Running`. Si ya estaba encendido, no necesitas iniciarlo otra vez.
@@ -204,10 +205,9 @@ Estas cuentas son para pruebas locales y funcionan si sus datos están cargados 
 | Cuenta | Correo | Contraseña |
 | --- | --- | --- |
 | Administrador del seed | `admin@spacehub.pe` | `admin123` |
-| Cliente creado durante las pruebas locales | `prueba.fase3@example.com` | `PruebaFase3!2026` |
 | Cliente del seed | `gerardo@correo.com` | `demo12345` |
 
-`prueba.fase3@example.com` se creó manualmente durante el desarrollo: **no forma parte del seed**. En una instalación nueva usa el cliente del seed o registra una cuenta en `/registro`.
+En una instalación nueva usa el cliente del seed o registra una cuenta en `/registro`.
 
 Al entrar correctamente, una contraseña antigua puede convertirse a hash en MySQL. Sigue usando la contraseña original para iniciar sesión, nunca el hash.
 
@@ -271,7 +271,7 @@ Remove-Item Env:SPACEHUB_DB_PASSWORD -ErrorAction SilentlyContinue
 Remove-Variable credencialSpaceHub -ErrorAction SilentlyContinue
 ```
 
-Detener Spring Boot no detiene MySQL. Si necesitas apagar el servicio y no lo usan otras aplicaciones, ejecuta `Stop-Service -Name MySQL95` desde PowerShell como administrador.
+Detener Spring Boot no detiene MySQL. Si necesitas apagar el servicio y no lo usan otras aplicaciones, ejecuta `Stop-Service -Name MYSQL80` desde PowerShell como administrador.
 
 ## 9. Ejecutar pruebas y generar el JAR
 
@@ -299,7 +299,7 @@ java -jar .\target\spacehub-0.0.1-SNAPSHOT.jar
 
 | Error o síntoma | Qué revisar |
 | --- | --- |
-| No se puede iniciar `MySQL95` por permisos | Abre PowerShell como administrador para iniciar el servicio. |
+| No se puede iniciar `MYSQL80` por permisos | Abre PowerShell como administrador para iniciar el servicio. |
 | `Access denied for user` | Revisa usuario y contraseña de MySQL; repite el bloque de credenciales. |
 | `Communications link failure` | Comprueba servicio MySQL, host y puerto. |
 | `Unknown database` o `Schema-validation` | Revisa la importación del esquema y que la conexión apunte a `spacehub_db`. No borres tablas sin revisar el error. |
@@ -325,3 +325,60 @@ Si persiste un error, revisa el primer mensaje `ERROR` y la sección `Caused by`
 El avance incluye MySQL, siete tablas relacionadas, JPA/Hibernate, tres CRUD, validaciones, sesiones y pruebas. No incluye pagos, envío de consultas de contacto, notificaciones, recuperación de contraseña ni panel propio de propietarios.
 
 La entrega debe acompañarse del código, los tres scripts SQL, el informe actualizado, el diagrama EER y las capturas de CRUD y validaciones. La preparación de esos documentos y la actualización del repositorio se comprueban por separado: generar el JAR no publica cambios en GitHub.
+
+## 12. Consultas con DTO y listas en cascada (rúbrica del tercer avance)
+
+### Qué se agregó
+
+- `/servicios`: consulta pública con dos desplegables relacionados, Categoría → Espacio. Conserva la búsqueda de texto sobre las tarjetas visibles y los enlaces antiguos por nombre de categoría.
+- `/admin/reservas`: consulta exclusiva para ADMIN, con Categoría → Espacio y un listado que combina reservas, usuarios, espacios y categorías.
+- `ReservaListadoDTO`: contiene únicamente los campos necesarios para el listado: código, cliente, correo, espacio, categoría, fecha, horario, total y estado.
+- `ReservaRepository.consultarListado`: usa JPQL con `JOIN` y `select new` para construir el DTO directamente desde la consulta. El controlador entrega esos DTO a Thymeleaf.
+
+### Cómo funciona la cascada
+
+Al seleccionar una categoría, JavaScript descarta el espacio anterior y envía el formulario GET. Spring consulta los espacios de esa categoría en MySQL y vuelve a mostrar la página con el segundo desplegable actualizado. Después se elige un espacio y se pulsa **Consultar**. **Limpiar** vuelve al listado completo.
+
+La cascada usa recarga de página, no AJAX. Ambas páginas comparten el fragmento `fragments/filtros-espacios.html` y `js/filtros-espacios.js`. Si JavaScript está deshabilitado, primero se pulsa Limpiar, luego se selecciona una categoría y se pulsa Consultar para cargar los espacios.
+
+El servidor rechaza con HTTP 400 una categoría inexistente, un espacio sin categoría o un espacio que no pertenece a la categoría elegida. Una categoría vacía muestra un mensaje y un listado sin resultados. El acceso administrativo mantiene la comprobación de sesión y rol.
+
+### Secuencia para exponer
+
+1. Abrir el catálogo, elegir una categoría y comprobar que el segundo desplegable contiene solo sus espacios.
+2. Elegir un espacio, pulsar Consultar y mostrar que las tarjetas quedan filtradas. Cambiar de categoría y comprobar que se descarta el espacio anterior.
+3. Iniciar sesión como ADMIN y entrar en Panel Admin → Reservas. Repetir la cascada y mostrar cliente, correo, espacio, categoría y total en el listado.
+4. Mostrar `ReservaListadoDTO.java`, la consulta en `ReservaRepository.java`, el método `consultarListado` de `ReservaService` y el método `listar` de `AdminReservaController`.
+5. Explicar: Entidades = tablas y relaciones; DTO = datos de salida del listado; formularios = datos de entrada y validaciones.
+
+No se necesitan nuevas tablas ni volver a ejecutar el seed. Reinicia Spring Boot después de actualizar el código.
+
+La prueba `consultasConDtoYCascadasEnDosPaginas` cubre los datos del DTO, filtros de ambas páginas, categorías vacías, combinaciones inválidas, enlaces anteriores y acceso público/administrativo. Se ejecuta junto con las pruebas existentes mediante `mvnw.cmd verify`.
+
+La revisión automática incluye DTO, filtros, permisos, reglas de reservas y validaciones. Consulta el resultado actualizado en `target/surefire-reports/` después de ejecutar `mvnw.cmd verify`.
+
+### Ejecutar directamente desde esta carpeta del proyecto
+
+Abre en VS Code la carpeta que contiene `pom.xml`, `src`, `database` y `mvnw.cmd`. En su terminal ejecuta:
+
+```powershell
+.\iniciar-spacehub.ps1
+```
+
+El lanzador pide las credenciales de MySQL y ejecuta `mvnw.cmd spring-boot:run` desde su propia carpeta. Compila y utiliza el código de este proyecto. Mantén la terminal abierta; Ctrl+C detiene la aplicación. No requiere copias de trabajo ni un JAR en otra carpeta.
+
+## Revisión de coherencia del proyecto
+
+- La duración mínima de una hora se comprueba en el formulario, el cálculo del navegador y el servicio de reservas.
+- Las reservas pasadas o de espacios ocupados no se pueden aprobar ni reactivar. Se pueden rechazar para conservar el historial.
+- La búsqueda del catálogo ignora tildes y muestra un aviso cuando no encuentra coincidencias.
+- Las pantallas de error 400, 403, 404 y 500 ofrecen una salida a la navegación.
+- El registro y las preguntas frecuentes aclaran que la publicación es administrativa y el contacto es demostrativo.
+- El seed incluye hashes BCrypt. Esto solo afecta a instalaciones nuevas: no vuelvas a importarlo sobre datos existentes. Las cuentas antiguas mantienen la migración al iniciar sesión.
+- Las pruebas de reservas usan fechas relativas para que no dejen de funcionar al cambiar el calendario.
+
+Las pruebas de JavaScript pueden ejecutarse con Node.js 18 o superior:
+
+```powershell
+node --test src/test/js/interfaz.test.cjs
+```
