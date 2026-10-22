@@ -32,6 +32,7 @@
           </div>
 
           <form th:action="@{/login}" method="POST">
+<input type="hidden" name="_csrf" th:value="${session.csrf}">
             <div class="mb-3">
               <label class="form-label small fw-bold">Correo electrónico</label>
               <input type="email" name="correo" id="correoLogin" class="form-control" placeholder="usuario@correo.com" required>
@@ -39,10 +40,6 @@
             <div class="mb-3">
               <label class="form-label small fw-bold">Contraseña</label>
               <input type="password" name="password" id="claveLogin" class="form-control" placeholder="••••••••" required>
-            </div>
-            <div class="mb-3 form-check">
-              <input type="checkbox" class="form-check-input" id="recordar">
-              <label class="form-check-label small" for="recordar">Recordar mi sesión</label>
             </div>
             <button type="submit" class="btn btn-primary w-100 mb-3">Ingresar</button>
 

@@ -1,28 +1,26 @@
 package com.spacehub.controller;
 
+import com.spacehub.form.ContactoForm;
+import jakarta.validation.Valid;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 public class ContactoController {
-
-    @GetMapping("/contacto")
-    public String contacto() {
-        return "contacto";
+    @InitBinder("contactoForm")
+    public void binder(org.springframework.web.bind.WebDataBinder binder) {
+        binder.setAllowedFields("nombre","correo","motivo","mensaje");
+        binder.registerCustomEditor(String.class,new org.springframework.beans.propertyeditors.StringTrimmerEditor(false));
     }
-
+    @GetMapping("/contacto")
+    public String contacto(Model model) { model.addAttribute("contactoForm",new ContactoForm()); return "contacto"; }
     @PostMapping("/contacto")
-    public String procesarContacto(
-            @RequestParam("nombre") String nombre,
-            @RequestParam("correo") String correo,
-            @RequestParam("motivo") String motivo,
-            @RequestParam("mensaje") String mensaje,
-            RedirectAttributes redirectAttributes) {
-
-        redirectAttributes.addFlashAttribute("mensaje", "¡Mensaje enviado con éxito!");
+    public String procesarContacto(@Valid @ModelAttribute ContactoForm contactoForm, BindingResult errores, RedirectAttributes flash) {
+        if (errores.hasErrors()) return "contacto";
+        flash.addFlashAttribute("mensaje","Datos validados. Para enviar tu consulta, utiliza nuestros canales de contacto.");
         return "redirect:/contacto";
     }
 }

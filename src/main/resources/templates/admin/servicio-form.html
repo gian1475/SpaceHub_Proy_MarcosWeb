@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Espacios - SpaceHub</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link rel="stylesheet" th:href="@{/css/styles.css}">
+</head>
+<body>
+<th:block th:replace="~{fragments/header :: header('admin')}"></th:block>
+<main class="container py-4"><div class="row justify-content-center"><div class="col-lg-9">
+<a class="btn btn-link px-0 mb-3" th:href="@{/admin/servicios}">Volver a espacios</a>
+<div class="card shadow-sm"><div class="card-body p-4"><h1 class="h3 mb-4" th:text="${servicioForm.id == null ? 'Nuevo espacio' : 'Editar espacio'}"></h1>
+<div th:if="${#lists.isEmpty(categorias)}" class="alert alert-warning">Primero <a th:href="@{/admin/categorias/nueva}">registra una categoría</a> para publicar espacios.</div>
+<form method="post" th:action="@{/admin/servicios/guardar}" th:object="${servicioForm}">
+<input type="hidden" name="_csrf" th:value="${session.csrf}">
+<input type="hidden" th:field="*{id}">
+<div th:if="${#fields.hasAnyErrors()}" class="alert alert-danger" role="alert"><p class="mb-1">Revisa los datos del formulario:</p><ul class="mb-0"><li th:each="err : ${#fields.allErrors()}" th:text="${err}"></li></ul></div>
+<div class="row g-3">
+<div class="col-12"><label class="form-label" for="nombre">Nombre *</label>
+<input class="form-control" th:errorclass="is-invalid" th:field="*{nombre}" type="text" required minlength="3" maxlength="100"><div class="invalid-feedback" th:errors="*{nombre}"></div></div>
+<div class="col-12"><label class="form-label" for="categoriaId">Categoría *</label>
+<select class="form-select" th:errorclass="is-invalid" th:field="*{categoriaId}" required><option value="">Selecciona una categoría</option><option th:each="c : ${categorias}" th:value="${c.id}" th:text="${c.nombre}"></option></select><div class="invalid-feedback" th:errors="*{categoriaId}"></div></div>
+<div class="col-12 col-md-6"><label class="form-label" for="distrito">Distrito *</label>
+<input class="form-control" th:errorclass="is-invalid" th:field="*{distrito}" type="text" required maxlength="50"><div class="invalid-feedback" th:errors="*{distrito}"></div></div>
+<div class="col-12 col-md-6"><label class="form-label" for="direccion">Dirección *</label>
+<input class="form-control" th:errorclass="is-invalid" th:field="*{direccion}" type="text" required maxlength="150"><div class="invalid-feedback" th:errors="*{direccion}"></div></div>
+<div class="col-12 col-md-6"><label class="form-label" for="referencia">Referencia</label>
+<input class="form-control" th:errorclass="is-invalid" th:field="*{referencia}" type="text" maxlength="150"><div class="invalid-feedback" th:errors="*{referencia}"></div></div>
+<div class="col-12 col-md-6"><label class="form-label" for="precioPorHora">Precio por hora (S/) *</label>
+<input class="form-control" th:errorclass="is-invalid" th:field="*{precioPorHora}" type="number" required min="1" max="99999999.99" step="0.01"><div class="invalid-feedback" th:errors="*{precioPorHora}"></div></div>
+<div class="col-12 col-md-6"><label class="form-label" for="capacidad">Capacidad *</label>
+<input class="form-control" th:errorclass="is-invalid" th:field="*{capacidad}" type="number" required min="1" max="1000" step="1"><div class="invalid-feedback" th:errors="*{capacidad}"></div></div>
+<div class="col-12 col-md-6"><label class="form-label" for="estado">Estado *</label>
+<select class="form-select" th:errorclass="is-invalid" th:field="*{estado}" required><option value="Disponible">Disponible</option><option value="Ocupado">Ocupado</option></select><div class="invalid-feedback" th:errors="*{estado}"></div></div>
+<div class="col-12"><label class="form-label" for="descripcionCorta">Descripción corta</label>
+<input class="form-control" th:errorclass="is-invalid" th:field="*{descripcionCorta}" type="text" maxlength="200"><div class="invalid-feedback" th:errors="*{descripcionCorta}"></div></div>
+<div class="col-12"><label class="form-label" for="descripcion">Descripción completa</label>
+<textarea class="form-control" th:errorclass="is-invalid" th:field="*{descripcion}" rows="4" maxlength="10000"></textarea><div class="invalid-feedback" th:errors="*{descripcion}"></div></div>
+<div class="col-12"><label class="form-label" for="imagenes">Fotos</label>
+<textarea class="form-control" th:errorclass="is-invalid" th:field="*{imagenes}" rows="4" maxlength="20000"></textarea><div class="form-text">Opcional. Una URL http o https por línea, hasta 20 fotos. La primera será la portada.</div><div class="invalid-feedback" th:errors="*{imagenes}"></div></div>
+<div class="col-12"><label class="form-label" for="comodidades">Comodidades</label>
+<textarea class="form-control" th:errorclass="is-invalid" th:field="*{comodidades}" rows="4" maxlength="10000"></textarea><div class="form-text">Opcional. Una comodidad por línea con el formato icono|texto. Ejemplo: bi-wifi|WiFi de alta velocidad.</div><div class="invalid-feedback" th:errors="*{comodidades}"></div></div>
+</div><div class="d-flex gap-2 mt-4"><button class="btn btn-primary" type="submit" th:disabled="${#lists.isEmpty(categorias)}">Guardar espacio</button><a class="btn btn-outline-secondary" th:href="@{/admin/servicios}">Cancelar</a></div></form></div></div></div></div></main>
+<th:block th:replace="~{fragments/footer :: footer}"></th:block>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body></html>

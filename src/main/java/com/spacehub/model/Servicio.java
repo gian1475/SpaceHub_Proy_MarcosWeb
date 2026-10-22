@@ -1,20 +1,51 @@
 package com.spacehub.model;
 
+import jakarta.persistence.*;
+
 import java.util.List;
 
+@Entity
+@Table(name = "servicios")
 public class Servicio {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    @Column(nullable = false, length = 100)
     private String nombre;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "categoria_id", nullable = false)
     private Categoria categoria;
+    @Column(nullable = false, length = 50)
     private String distrito;
+    @Column(nullable = false, length = 150)
     private String direccion;
+    @Column(length = 150)
     private String referencia;
-    private double precioPorHora;
+    @Column(name = "precio_por_hora", nullable = false, precision = 10, scale = 2)
+    private java.math.BigDecimal precioPorHora;
+    @OneToMany(mappedBy = "servicio", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("id ASC")
+    private List<ServicioImagen> imagenesPersistidas = new java.util.ArrayList<>();
+    public List<ServicioImagen> getImagenesPersistidas() { return imagenesPersistidas; }
+    public void setImagenesPersistidas(List<ServicioImagen> imagenesPersistidas) {
+        this.imagenesPersistidas.clear();
+        if (imagenesPersistidas != null) for (ServicioImagen imagen : imagenesPersistidas) {
+            imagen.setServicio(this);
+            this.imagenesPersistidas.add(imagen);
+        }
+    }
+    @Column(nullable = false)
     private int capacidad;
+    @Column(nullable = false, length = 20)
     private String estado; // "Disponible" / "Ocupado"
+    @Column(name = "descripcion_corta", length = 200)
     private String descripcionCorta;
+    @Column(columnDefinition = "TEXT")
     private String descripcion;
-    private List<ServicioIncluido> servicios;
+    @OneToMany(mappedBy = "servicio", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("id ASC")
+    private List<ServicioIncluido> servicios = new java.util.ArrayList<>();
+    @Transient
     private List<String> imagenes;
 
     public Servicio() {
@@ -29,12 +60,13 @@ public class Servicio {
         this.distrito = distrito;
         this.direccion = direccion;
         this.referencia = referencia;
-        this.precioPorHora = precioPorHora;
+        this.precioPorHora = java.math.BigDecimal.valueOf(precioPorHora);
         this.capacidad = capacidad;
         this.estado = estado;
         this.descripcionCorta = descripcionCorta;
         this.descripcion = descripcion;
         this.servicios = servicios;
+        if (servicios != null) servicios.forEach(incluido -> incluido.setServicio(this));
         this.imagenes = imagenes;
     }
 
@@ -86,12 +118,16 @@ public class Servicio {
         this.referencia = referencia;
     }
 
+    public void setPrecioPorHoraDecimal(java.math.BigDecimal precio) { this.precioPorHora = precio; }
+
+    public java.math.BigDecimal getPrecioPorHoraDecimal() { return precioPorHora; }
+
     public double getPrecioPorHora() {
-        return precioPorHora;
+        return precioPorHora == null ? 0 : precioPorHora.doubleValue();
     }
 
     public void setPrecioPorHora(double precioPorHora) {
-        this.precioPorHora = precioPorHora;
+        this.precioPorHora = java.math.BigDecimal.valueOf(precioPorHora);
     }
 
     public int getCapacidad() {
@@ -132,10 +168,11 @@ public class Servicio {
 
     public void setServicios(List<ServicioIncluido> servicios) {
         this.servicios = servicios;
+        if (servicios != null) servicios.forEach(incluido -> incluido.setServicio(this));
     }
 
     public List<String> getImagenes() {
-        return imagenes;
+        return imagenes != null ? imagenes : imagenesPersistidas.stream().map(ServicioImagen::getUrl).toList();
     }
 
     public void setImagenes(List<String> imagenes) {

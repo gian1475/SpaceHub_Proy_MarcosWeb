@@ -1,17 +1,37 @@
 package com.spacehub.model;
 
+import jakarta.persistence.*;
+
 import java.time.LocalDate;
 import java.time.LocalTime;
 
+@Entity
+@Table(name = "reservas")
 public class Reserva {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "servicio_id", nullable = false)
     private Servicio servicio;
+    @Transient
     private String clienteNombre;
+    @Transient
     private String clienteCorreo;
+    @Column(nullable = false)
     private LocalDate fecha;
+    @Column(name = "hora_inicio", nullable = false)
     private LocalTime horaInicio;
+    @Column(name = "hora_fin", nullable = false)
     private LocalTime horaFin;
-    private double total;
+    @Column(nullable = false, precision = 10, scale = 2)
+    private java.math.BigDecimal total;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "usuario_id", nullable = false)
+    private Usuario usuario;
+    public Usuario getUsuario() { return usuario; }
+    public void setUsuario(Usuario usuario) { this.usuario = usuario; }
+    @Column(nullable = false, length = 20)
     private String estado; // "Pendiente" / "Aprobada" / "Rechazada"
 
     public Reserva() {
@@ -26,16 +46,16 @@ public class Reserva {
         this.fecha = fecha;
         this.horaInicio = horaInicio;
         this.horaFin = horaFin;
-        this.total = total;
+        this.total = java.math.BigDecimal.valueOf(total);
         this.estado = estado;
     }
 
-    public int getHoras() {
-        if (horaInicio != null && horaFin != null) {
-            int diff = horaFin.getHour() - horaInicio.getHour();
-            return diff > 0 ? diff : 1;
-        }
-        return 1;
+    public double getHoras() {
+        return horaInicio == null || horaFin == null ? 0 : java.time.Duration.between(horaInicio, horaFin).toSeconds() / 3600.0;
+    }
+    public String getDuracionTexto() {
+        long minutos = horaInicio == null || horaFin == null ? 0 : java.time.Duration.between(horaInicio, horaFin).toMinutes();
+        return (minutos / 60) + " h" + (minutos % 60 == 0 ? "" : " " + (minutos % 60) + " min");
     }
 
     public Long getId() {
@@ -55,7 +75,7 @@ public class Reserva {
     }
 
     public String getClienteNombre() {
-        return clienteNombre;
+        return usuario != null ? usuario.getNombres() + " " + usuario.getApellidos() : clienteNombre;
     }
 
     public void setClienteNombre(String clienteNombre) {
@@ -63,7 +83,7 @@ public class Reserva {
     }
 
     public String getClienteCorreo() {
-        return clienteCorreo;
+        return usuario != null ? usuario.getCorreo() : clienteCorreo;
     }
 
     public void setClienteCorreo(String clienteCorreo) {
@@ -94,12 +114,15 @@ public class Reserva {
         this.horaFin = horaFin;
     }
 
+    public java.math.BigDecimal getTotalDecimal() { return total; }
+    public void setTotalDecimal(java.math.BigDecimal total) { this.total = total; }
+
     public double getTotal() {
-        return total;
+        return total == null ? 0 : total.doubleValue();
     }
 
     public void setTotal(double total) {
-        this.total = total;
+        this.total = java.math.BigDecimal.valueOf(total);
     }
 
     public String getEstado() {

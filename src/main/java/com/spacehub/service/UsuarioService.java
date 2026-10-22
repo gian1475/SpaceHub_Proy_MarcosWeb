@@ -1,64 +1,58 @@
 package com.spacehub.service;
 
-import com.spacehub.model.Rol;
 import com.spacehub.model.Usuario;
+import com.spacehub.repository.RolRepository;
+import com.spacehub.repository.UsuarioRepository;
 import org.springframework.stereotype.Service;
-
-import java.util.ArrayList;
-import java.util.List;
+import org.springframework.transaction.annotation.Transactional;
+import java.util.Locale;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicLong;
 
 @Service
+@Transactional(readOnly = true)
 public class UsuarioService {
+    private final UsuarioRepository usuarioRepository;
+    private final RolRepository rolRepository;
+    private final org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder encoder;
 
-    private final List<Usuario> usuarios = new ArrayList<>();
-    private final AtomicLong contadorId = new AtomicLong(1);
-
-    public UsuarioService() {
-        // Usuario Admin inicial de prueba
-        // NOTA: La contraseña va en texto plano solo hasta la Entrega 4 (cuando se implemente Spring Security con BCrypt)
-        usuarios.add(new Usuario(
-                contadorId.getAndIncrement(),
-                "Admin",
-                "SpaceHub",
-                "admin@spacehub.pe",
-                "999888777",
-                "admin123",
-                Rol.ADMIN
-        ));
+    public UsuarioService(UsuarioRepository usuarioRepository, RolRepository rolRepository, org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder encoder) {
+        this.usuarioRepository = usuarioRepository;
+        this.rolRepository = rolRepository;
+        this.encoder = encoder;
     }
 
-    public boolean registrarUsuario(String nombres, String apellidos, String correo, String telefono, String tipo, String password) {
-        if (correoExiste(correo)) {
-            return false;
-        }
-
-        Rol rol = "propietario".equalsIgnoreCase(tipo) ? Rol.PROPIETARIO : Rol.CLIENTE;
-
-        Usuario nuevo = new Usuario(
-                contadorId.getAndIncrement(),
-                nombres,
-                apellidos,
-                correo,
-                telefono,
-                password,
-                rol
-        );
-
-        usuarios.add(nuevo);
+    @Transactional
+    public boolean registrarUsuario(String nombres, String apellidos, String correo,
+            String telefono, String tipo, String password) {
+        if (correoExiste(correo)) return false;
+        String nombreRol = "propietario".equalsIgnoreCase(tipo) ? "PROPIETARIO" : "CLIENTE";
+        var rol = rolRepository.findByNombre(nombreRol)
+                .orElseThrow(() -> new IllegalStateException("Faltan los roles iniciales. Ejecute el script de datos."));
+        // Las cuentas nuevas siempre usan hash.
+        usuarioRepository.save(new Usuario(null, nombres, apellidos,
+                correo.trim().toLowerCase(Locale.ROOT), telefono, encoder.encode(password), rol));
         return true;
     }
 
     public boolean correoExiste(String correo) {
-        if (correo == null) return false;
-        return usuarios.stream().anyMatch(u -> u.getCorreo().equalsIgnoreCase(correo.trim()));
+        return correo != null && usuarioRepository.existsByCorreoIgnoreCase(correo.trim());
     }
 
+    @Transactional
     public Optional<Usuario> validarLogin(String correo, String password) {
         if (correo == null || password == null) return Optional.empty();
-        return usuarios.stream()
-                .filter(u -> u.getCorreo().equalsIgnoreCase(correo.trim()) && u.getPassword().equals(password))
-                .findFirst();
+        var encontrado = usuarioRepository.findByCorreoIgnoreCase(correo.trim());
+        if (encontrado.isEmpty()) return Optional.empty();
+        var usuario = encontrado.get();
+        String guardada = usuario.getPassword();
+        if (guardada.startsWith("$2")) {
+            return encoder.matches(password, guardada) ? encontrado : Optional.empty();
+        }
+        // Migracion progresiva de cuentas existentes, solo tras verificar la clave anterior.
+        if (!java.security.MessageDigest.isEqual(password.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                guardada.getBytes(java.nio.charset.StandardCharsets.UTF_8))) return Optional.empty();
+        usuario.setPassword(encoder.encode(password));
+        usuarioRepository.save(usuario);
+        return encontrado;
     }
 }
