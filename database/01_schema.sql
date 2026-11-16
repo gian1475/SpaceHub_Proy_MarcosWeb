@@ -9,6 +9,16 @@ CREATE TABLE IF NOT EXISTS roles (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   nombre VARCHAR(30) NOT NULL UNIQUE
 ) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS mensajes_contacto (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  nombre VARCHAR(100) NOT NULL,
+  correo VARCHAR(100) NOT NULL,
+  motivo VARCHAR(20) NOT NULL,
+  mensaje VARCHAR(2000) NOT NULL,
+  fecha DATETIME(6) NOT NULL,
+  atendido BIT NOT NULL DEFAULT 0
+) ENGINE=InnoDB;
  
 CREATE TABLE IF NOT EXISTS usuarios (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -32,6 +42,7 @@ CREATE TABLE IF NOT EXISTS servicios (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
   nombre VARCHAR(100) NOT NULL,
   categoria_id BIGINT NOT NULL,
+  propietario_id BIGINT NULL,
   distrito VARCHAR(50) NOT NULL,
   direccion VARCHAR(150) NOT NULL,
   referencia VARCHAR(150),
@@ -43,7 +54,8 @@ CREATE TABLE IF NOT EXISTS servicios (
   CONSTRAINT chk_servicio_precio CHECK (precio_por_hora >= 1.00),
   CONSTRAINT chk_servicio_capacidad CHECK (capacidad BETWEEN 1 AND 1000),
   CONSTRAINT chk_servicio_estado CHECK (estado IN ('Disponible', 'Ocupado')),
-  CONSTRAINT fk_servicios_categoria FOREIGN KEY (categoria_id) REFERENCES categorias(id) ON DELETE RESTRICT ON UPDATE RESTRICT
+  CONSTRAINT fk_servicios_categoria FOREIGN KEY (categoria_id) REFERENCES categorias(id) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CONSTRAINT fk_servicios_propietario FOREIGN KEY (propietario_id) REFERENCES usuarios(id) ON DELETE RESTRICT ON UPDATE RESTRICT
 ) ENGINE=InnoDB;
  
 CREATE TABLE IF NOT EXISTS servicio_incluidos (

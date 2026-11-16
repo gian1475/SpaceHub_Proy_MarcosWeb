@@ -11,10 +11,10 @@
 <body>
 <th:block th:replace="~{fragments/header :: header('admin')}"></th:block>
 <main class="container py-4"><div class="row justify-content-center"><div class="col-lg-9">
-<a class="btn btn-link px-0 mb-3" th:href="@{/admin/servicios}">Volver a espacios</a>
+<a class="btn btn-link px-0 mb-3" th:href="@{${volverEspacios}}">Volver a espacios</a>
 <div class="card shadow-sm"><div class="card-body p-4"><h1 class="h3 mb-4" th:text="${servicioForm.id == null ? 'Nuevo espacio' : 'Editar espacio'}"></h1>
-<div th:if="${#lists.isEmpty(categorias)}" class="alert alert-warning">Primero <a th:href="@{/admin/categorias/nueva}">registra una categoría</a> para publicar espacios.</div>
-<form method="post" th:action="@{/admin/servicios/guardar}" th:object="${servicioForm}">
+<div th:if="${#lists.isEmpty(categorias)}" class="alert alert-warning">Solicita al administrador que registre una categoría para publicar espacios.</div>
+<form method="post" th:action="@{${baseEspacios + '/guardar'}}" th:object="${servicioForm}">
 <input type="hidden" name="_csrf" th:value="${session.csrf}">
 <input type="hidden" th:field="*{id}">
 <div th:if="${#fields.hasAnyErrors()}" class="alert alert-danger" role="alert"><p class="mb-1">Revisa los datos del formulario:</p><ul class="mb-0"><li th:each="err : ${#fields.allErrors()}" th:text="${err}"></li></ul></div>
@@ -43,7 +43,7 @@
 <textarea class="form-control" th:errorclass="is-invalid" th:field="*{imagenes}" rows="4" maxlength="20000"></textarea><div class="form-text">Opcional. Una URL http o https por línea, hasta 20 fotos. La primera será la portada.</div><div class="invalid-feedback" th:errors="*{imagenes}"></div></div>
 <div class="col-12"><label class="form-label" for="comodidades">Comodidades</label>
 <textarea class="form-control" th:errorclass="is-invalid" th:field="*{comodidades}" rows="4" maxlength="10000"></textarea><div class="form-text">Opcional. Una comodidad por línea con el formato icono|texto. Ejemplo: bi-wifi|WiFi de alta velocidad.</div><div class="invalid-feedback" th:errors="*{comodidades}"></div></div>
-</div><div class="d-flex gap-2 mt-4"><button class="btn btn-primary" type="submit" th:disabled="${#lists.isEmpty(categorias)}">Guardar espacio</button><a class="btn btn-outline-secondary" th:href="@{/admin/servicios}">Cancelar</a></div></form></div></div></div></div></main>
+</div><div class="d-flex gap-2 mt-4"><button class="btn btn-primary" type="submit" th:disabled="${#lists.isEmpty(categorias)}">Guardar espacio</button><a class="btn btn-outline-secondary" th:href="@{${volverEspacios}}">Cancelar</a></div></form></div></div></div></div></main>
 <th:block th:replace="~{fragments/footer :: footer}"></th:block>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body></html>

@@ -17,7 +17,10 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @Controller
 public class AuthController {
     private final UsuarioService usuarios;
-    public AuthController(UsuarioService usuarios) { this.usuarios = usuarios; }
+    private final org.springframework.security.authentication.AuthenticationManager autenticacion;
+    public AuthController(UsuarioService usuarios, org.springframework.security.authentication.AuthenticationManager autenticacion) {
+        this.usuarios = usuarios; this.autenticacion = autenticacion;
+    }
     @InitBinder("registroForm")
     public void binder(WebDataBinder binder) {
         binder.setAllowedFields("nombres", "apellidos", "correo", "telefono", "tipo", "password", "terminos");
@@ -29,23 +32,26 @@ public class AuthController {
     @PostMapping("/login")
     public String entrar(@RequestParam String correo, @RequestParam String password,
             HttpServletRequest request, Model model, RedirectAttributes flash) {
-        if (correo.length() > 100 || password.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 72 || correo.isBlank() || password.isEmpty()) {
-            model.addAttribute("error", "Correo o contraseña incorrectos."); return "login";
-        }
-        var resultado = usuarios.validarLogin(correo, password);
-        if (resultado.isEmpty()) {
+        com.spacehub.model.Usuario u;
+        try {
+            var resultado = autenticacion.authenticate(new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(correo, password));
+            u = (com.spacehub.model.Usuario) resultado.getPrincipal();
+        } catch (org.springframework.security.core.AuthenticationException ex) {
             model.addAttribute("error", "Correo o contraseña incorrectos."); return "login";
         }
         var anterior = request.getSession(false);
         if (anterior != null) anterior.invalidate();
         var session = request.getSession(true);
-        var u = resultado.get();
         session.setAttribute("usuarioId", u.getId());
         session.setAttribute("usuarioNombre", u.getNombres());
         session.setAttribute("usuarioRol", u.getRol().getNombre());
         SeguridadWeb.token(session);
         flash.addFlashAttribute("mensaje", "¡Bienvenido, " + u.getNombres() + "!");
-        return "ADMIN".equals(u.getRol().getNombre()) ? "redirect:/administracion" : "redirect:/";
+        return switch (u.getRol().getNombre()) {
+            case "ADMIN" -> "redirect:/administracion";
+            case "PROPIETARIO" -> "redirect:/propietario";
+            default -> "redirect:/";
+        };
     }
     @PostMapping("/logout")
     public String salir(HttpServletRequest request) {

@@ -12,6 +12,132 @@ import org.springframework.boot.test.context.SpringBootTest;
 })
 @org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 class SpacehubApplicationTests {
+    @Test
+    @org.springframework.transaction.annotation.Transactional
+    void reservasRechazanFraccionesYFechasFueraDeMySQLSinGuardar() throws Exception {
+        var espacio = espacioParaRevision();
+        var fecha = java.time.LocalDate.now(java.time.ZoneId.of("America/Lima")).plusDays(3);
+        long antes = reservaService.obtenerTotalReservas();
+        for (var inicio : java.util.List.of(java.time.LocalTime.of(10,0,30), java.time.LocalTime.of(10,0,0,500000000))) {
+            org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+                    () -> reservaService.crearReserva(espacio.getId(),adminPruebas,fecha,inicio,inicio.plusHours(1)));
+            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/reservas")
+                    .param("servicioId",espacio.getId().toString()).param("fecha",fecha.toString())
+                    .param("horaInicio",inicio.toString()).param("horaFin",inicio.plusHours(1).toString()))
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash().attributeExists("error"));
+        }
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+                () -> reservaService.crearReserva(espacio.getId(),adminPruebas,java.time.LocalDate.of(10000,1,1),
+                        java.time.LocalTime.of(10,0),java.time.LocalTime.of(11,0)));
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/reservas")
+                .param("servicioId",espacio.getId().toString()).param("fecha","+10000-01-01")
+                .param("horaInicio","10:00").param("horaFin","11:00"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash().attributeExists("error"));
+        org.junit.jupiter.api.Assertions.assertEquals(antes,reservaService.obtenerTotalReservas());
+        var valida = reservaService.crearReserva(espacio.getId(),adminPruebas,fecha,java.time.LocalTime.of(10,0),java.time.LocalTime.of(11,30));
+        org.junit.jupiter.api.Assertions.assertEquals(new java.math.BigDecimal("68.25"),valida.getTotalDecimal());
+        var form = reservaService.formulario(valida.getId()); form.setHoraFin(java.time.LocalTime.of(11,30,1));
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> reservaService.editar(form));
+        org.junit.jupiter.api.Assertions.assertEquals(java.time.LocalTime.of(11,30),valida.getHoraFin());
+    }
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.spacehub.repository.MensajeContactoRepository mensajesContacto;
+
+    @Test
+    @org.springframework.transaction.annotation.Transactional
+    void contactoPersisteEscapaContenidoYRestringeBandeja() throws Exception {
+        long antes = mensajesContacto.count();
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/contacto")
+                .param("nombre", "Persona Prueba").param("correo", "consulta@example.com").param("motivo", "soporte")
+                .param("mensaje", "Consulta <script>alert('x')</script> de prueba"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl("/contacto"));
+        org.junit.jupiter.api.Assertions.assertEquals(antes + 1, mensajesContacto.count());
+        var mensaje = mensajesContacto.findAll(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC,"id")).get(0);
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/admin/mensajes"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().string(org.hamcrest.Matchers.containsString("&lt;script&gt;")));
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/admin/mensajes/{id}/estado",mensaje.getId()).param("atendido","true"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl("/admin/mensajes"));
+        org.junit.jupiter.api.Assertions.assertTrue(mensaje.isAtendido());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/admin/mensajes").param("atendido","false"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("consulta@example.com"))));
+        var libre = org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup(webContext).apply(org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity()).build();
+        libre.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/admin/mensajes"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl("/login"));
+    }
+
+    @Test
+    @org.springframework.transaction.annotation.Transactional
+    void propietariosGestionanSoloSusEspaciosYSolicitudes() throws Exception {
+        var rol = new com.spacehub.model.Rol(null,"PROPIETARIO"); entityManager.persist(rol);
+        var dueno = new com.spacehub.model.Usuario(null,"Dueno","Uno","dueno1@example.com","999000000","demo12345",rol);
+        var otro = new com.spacehub.model.Usuario(null,"Dueno","Dos","dueno2@example.com","999000001","demo12345",rol);
+        entityManager.persist(dueno); entityManager.persist(otro);
+        var espacio = espacioParaRevision(); espacio.setPropietario(dueno); entityManager.flush();
+        var sesion = new org.springframework.mock.web.MockHttpSession(); sesion.setAttribute("usuarioId",dueno.getId()); sesion.setAttribute("csrf","propietario-token");
+        var propietario = org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup(webContext).apply(org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity())
+                .defaultRequest(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/").session(sesion).param("_csrf","propietario-token")).build();
+        for (String ruta : java.util.List.of("/propietario", "/propietario/espacios/nuevo", "/propietario/espacios/editar/"+espacio.getId(), "/propietario/reservas"))
+            propietario.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(ruta)).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
+        propietario.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/propietario/espacios/guardar")
+                .param("nombre","Publicacion propia").param("categoriaId",espacio.getCategoria().getId().toString())
+                .param("distrito","Lima").param("direccion","Av Prueba 123").param("precioPorHora","40.50").param("capacidad","10").param("estado","Disponible")
+                .param("propietario.id",otro.getId().toString()))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl("/propietario"));
+        var publicado = servicioService.listarPropios(dueno.getId()).stream().filter(s -> s.getNombre().equals("Publicacion propia")).findFirst().orElseThrow();
+        org.junit.jupiter.api.Assertions.assertEquals(dueno.getId(),publicado.getPropietario().getId());
+        var reserva = reservaService.crearReserva(espacio.getId(),adminPruebas,java.time.LocalDate.now(java.time.ZoneId.of("America/Lima")).plusDays(3),java.time.LocalTime.of(10,0),java.time.LocalTime.of(11,0));
+        propietario.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/propietario/reservas"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
+        propietario.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/propietario/reservas/{id}/estado",reserva.getId()).param("estado","Aprobada"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl("/propietario/reservas"));
+        org.junit.jupiter.api.Assertions.assertEquals("Aprobada",reserva.getEstado());
+        propietario.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/admin/mensajes"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden());
+        sesion.setAttribute("usuarioId",otro.getId());
+        propietario.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/propietario/espacios/editar/{id}",espacio.getId()))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden());
+        propietario.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/propietario/espacios/guardar").param("id",espacio.getId().toString()))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden());
+        propietario.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/propietario/espacios/eliminar/{id}",espacio.getId()))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden());
+        propietario.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/propietario/reservas/{id}/estado",reserva.getId()).param("estado","Rechazada"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden());
+        org.junit.jupiter.api.Assertions.assertEquals("Aprobada",reserva.getEstado());
+        sesion.setAttribute("usuarioId",adminPruebas);
+        propietario.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/propietario"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden());
+    }
+    @Test
+    void paginasConMenuPersonalizadoNoSeGuardanEnCache() throws Exception {
+        for (String ruta : java.util.List.of("/", "/servicios", "/consulta-api", "/administracion")) {
+            mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(ruta))
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("Cache-Control", org.hamcrest.Matchers.containsString("no-store")));
+        }
+    }
+    @Test
+    @org.springframework.transaction.annotation.Transactional
+    void apiPublicaExponeSoloCatalogoYValidaFiltros() throws Exception {
+        var espacio = espacioParaRevision();
+        var publico = org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup(webContext).apply(org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity()).build();
+        publico.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v1/espacios/{id}", espacio.getId()))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.moneda").value("PEN"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.precioPorHora").value(45.50))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.usuarios").doesNotExist())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.reservas").doesNotExist());
+        publico.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v1/espacios").param("categoriaId", espacio.getCategoria().getId().toString()))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$[0].id").value(espacio.getId()));
+        publico.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v1/categorias"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
+        publico.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v1/espacios").param("categoriaId", "-1"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
+        publico.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v1/espacios/-1"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isNotFound());
+        publico.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/v1/espacios"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden());
+    }
     @org.springframework.beans.factory.annotation.Autowired
     private com.spacehub.service.ServicioService servicioService;
     @org.springframework.beans.factory.annotation.Autowired
@@ -34,7 +160,7 @@ class SpacehubApplicationTests {
         });
         var sesion = new org.springframework.mock.web.MockHttpSession();
         sesion.setAttribute("usuarioId", adminPruebas); sesion.setAttribute("csrf", "token-prueba");
-        mvc = org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup(webContext)
+        mvc = org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup(webContext).apply(org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity())
                 .defaultRequest(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/")
                         .session(sesion).param("_csrf","token-prueba")).build();
     }
@@ -49,7 +175,7 @@ class SpacehubApplicationTests {
     }
 
     @Test
-    void contactoValidaCamposYNoConfirmaEnvioInexistente() throws Exception {
+    void contactoValidaCamposYGuardaMensaje() throws Exception {
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/contacto"))
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/contacto")
@@ -58,7 +184,7 @@ class SpacehubApplicationTests {
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/contacto")
                 .param("nombre","Cliente Prueba").param("correo","cliente@example.com").param("motivo","reserva").param("mensaje","Consulta de disponibilidad de un espacio."))
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl("/contacto"))
-                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash().attribute("mensaje","Datos validados. Este formulario de demostración no envía ni guarda mensajes."));
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash().attribute("mensaje","Mensaje recibido. El administrador revisará tu consulta."));
     }
 
     @Test
@@ -148,7 +274,7 @@ class SpacehubApplicationTests {
     @Test
     @org.springframework.transaction.annotation.Transactional
     void sesionesPermisosCsrfMigracionEHistorial() throws Exception {
-        var libre = org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup(webContext).build();
+        var libre = org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup(webContext).apply(org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity()).build();
         libre.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/administracion"))
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl("/login"));
         libre.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/reservas"))
@@ -186,7 +312,7 @@ class SpacehubApplicationTests {
         reservaService.crearReserva(espacio.getId(),otro.getId(),java.time.LocalDate.now(java.time.ZoneId.of("America/Lima")).plusDays(30),java.time.LocalTime.of(9,0),java.time.LocalTime.of(10,0));
         libre.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/reservas").session(conectada)
                 .param("_csrf",(String)conectada.getAttribute("csrf")).param("servicioId",espacio.getId().toString())
-                .param("fecha","2026-12-02").param("horaInicio","10:00").param("horaFin","11:00")
+                .param("fecha",java.time.LocalDate.now(java.time.ZoneId.of("America/Lima")).plusDays(4).toString()).param("horaInicio","10:00").param("horaFin","11:00")
                 .param("clienteCorreo","otro@example.com").param("usuarioId",otro.getId().toString()))
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl("/reservas"));
         org.junit.jupiter.api.Assertions.assertEquals(1,reservaService.listarPorUsuario(cliente.getId()).size());
@@ -202,7 +328,7 @@ class SpacehubApplicationTests {
     @Test
     @org.springframework.transaction.annotation.Transactional
     void registroValidaYGuardaHashSinPermitirRolAdmin() throws Exception {
-        var libre = org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup(webContext).build();
+        var libre = org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup(webContext).apply(org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity()).build();
         entityManager.persist(new com.spacehub.model.Rol(null,"CLIENTE")); entityManager.flush();
         var sesion = (org.springframework.mock.web.MockHttpSession) libre.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/registro"))
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk()).andReturn().getRequest().getSession();
@@ -354,7 +480,8 @@ class SpacehubApplicationTests {
                 "Otro", "Cliente", "NUEVO@example.com", "999000000", "cliente", "demo12345"));
         org.junit.jupiter.api.Assertions.assertTrue(usuarioService.validarLogin("NUEVO@example.com", "demo12345").isPresent());
         org.junit.jupiter.api.Assertions.assertTrue(usuarioService.validarLogin("nuevo@example.com", "incorrecta").isEmpty());
-        org.junit.jupiter.api.Assertions.assertEquals(1, servicioService.filtrarPorCategoria("categoria bd").size());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/servicios").param("categoria", "categoria bd"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.model().attribute("servicios", org.hamcrest.Matchers.hasSize(1)));
         org.junit.jupiter.api.Assertions.assertEquals("Espacio desde BD", servicioService.obtenerDestacados().get(0).getNombre());
         var fecha = java.time.LocalDate.now(java.time.ZoneId.of("America/Lima")).plusDays(30);
         var inicio = java.time.LocalTime.of(10, 0);
@@ -472,7 +599,7 @@ class SpacehubApplicationTests {
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/servicios").param("categoria", categoriaA.getNombre()))
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.model().attribute("categoriaId", categoriaA.getId()));
-        var publico = org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup(webContext).build();
+        var publico = org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup(webContext).apply(org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity()).build();
         publico.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/servicios").param("categoriaId", categoriaA.getId().toString()))
             .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
         publico.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/admin/reservas").param("categoriaId", categoriaA.getId().toString()))

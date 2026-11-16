@@ -4,6 +4,7 @@ import com.spacehub.model.Reserva;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ReservaRepository extends JpaRepository<Reserva, Long> {
+    java.util.List<Reserva> findByServicioPropietarioIdOrderByIdDesc(Long propietarioId);
     @org.springframework.data.jpa.repository.Query("""
         select new com.spacehub.dto.ReservaListadoDTO(
             r.id, concat(concat(u.nombres, ' '), u.apellidos), u.correo,

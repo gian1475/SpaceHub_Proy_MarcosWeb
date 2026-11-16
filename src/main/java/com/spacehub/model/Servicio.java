@@ -10,6 +10,11 @@ public class Servicio {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "propietario_id")
+    private Usuario propietario;
+    public Usuario getPropietario() { return propietario; }
+    public void setPropietario(Usuario propietario) { this.propietario = propietario; }
     @Column(nullable = false, length = 100)
     private String nombre;
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -26,7 +31,6 @@ public class Servicio {
     @OneToMany(mappedBy = "servicio", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("id ASC")
     private List<ServicioImagen> imagenesPersistidas = new java.util.ArrayList<>();
-    public List<ServicioImagen> getImagenesPersistidas() { return imagenesPersistidas; }
     public void setImagenesPersistidas(List<ServicioImagen> imagenesPersistidas) {
         this.imagenesPersistidas.clear();
         if (imagenesPersistidas != null) for (ServicioImagen imagen : imagenesPersistidas) {
@@ -166,16 +170,8 @@ public class Servicio {
         return servicios;
     }
 
-    public void setServicios(List<ServicioIncluido> servicios) {
-        this.servicios = servicios;
-        if (servicios != null) servicios.forEach(incluido -> incluido.setServicio(this));
-    }
-
     public List<String> getImagenes() {
         return imagenes != null ? imagenes : imagenesPersistidas.stream().map(ServicioImagen::getUrl).toList();
     }
 
-    public void setImagenes(List<String> imagenes) {
-        this.imagenes = imagenes;
-    }
 }

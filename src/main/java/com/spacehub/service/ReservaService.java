@@ -38,6 +38,16 @@ public class ReservaService {
         return reservaRepository.findAll(Sort.by(Sort.Direction.DESC, "id"));
     }
 
+    public List<Reserva> listarDePropietario(Long id) { return reservaRepository.findByServicioPropietarioIdOrderByIdDesc(id); }
+
+    @Transactional public void cambiarEstadoPropio(Long id, String estado, Long propietarioId) {
+        var reserva = bloquearReserva(id);
+        var propietario = reserva.getServicio().getPropietario();
+        if (propietario == null || !propietario.getId().equals(propietarioId))
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.FORBIDDEN);
+        cambiarEstado(id, estado);
+    }
+
     public List<Reserva> listarPorUsuario(Long usuarioId) {
         return reservaRepository.findByUsuarioIdOrderByIdDesc(usuarioId);
     }
@@ -92,6 +102,10 @@ public class ReservaService {
     private void validarHorario(LocalDate fecha, LocalTime inicio, LocalTime fin, boolean nuevaFecha) {
         if (fecha == null || inicio == null || fin == null || !fin.isAfter(inicio))
             throw new IllegalArgumentException("Seleccione una fecha y una hora final posterior a la inicial.");
+        if (fecha.getYear() < 1000 || fecha.getYear() > 9999)
+            throw new IllegalArgumentException("La fecha debe estar entre los años 1000 y 9999.");
+        if (inicio.getSecond() != 0 || inicio.getNano() != 0 || fin.getSecond() != 0 || fin.getNano() != 0)
+            throw new IllegalArgumentException("Seleccione horas y minutos, sin segundos ni fracciones.");
         if (Duration.between(inicio, fin).compareTo(Duration.ofHours(1)) < 0)
             throw new IllegalArgumentException("La reserva debe durar al menos una hora.");
         if (nuevaFecha && !fecha.atTime(inicio).isAfter(java.time.LocalDateTime.now(java.time.ZoneId.of("America/Lima"))))

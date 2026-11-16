@@ -20,6 +20,7 @@
           <li class="nav-item">
             <a class="nav-link" th:classappend="${activo == 'servicios'} ? 'active'" th:href="@{/servicios}">Catálogo</a>
           </li>
+          <li class="nav-item"><a class="nav-link" th:classappend="${activo == 'api'} ? 'active'" th:href="@{/consulta-api}">Consulta API</a></li>
           <li class="nav-item">
             <a class="nav-link" th:classappend="${activo == 'reservas'} ? 'active'" th:href="@{/reservas}">Reservas</a>
           </li>
@@ -28,6 +29,8 @@
           </li>
 
           <th:block th:if="${session.usuarioId != null}">
+            <li class="nav-item" th:if="${session.usuarioRol == 'PROPIETARIO'}"><a class="nav-link" th:href="@{/propietario}">Mis espacios</a></li>
+            <li class="nav-item" th:if="${session.usuarioRol == 'ADMIN'}"><a class="nav-link" th:href="@{/admin/mensajes}">Mensajes</a></li>
             <li class="nav-item" th:if="${session.usuarioRol == 'ADMIN'}"><a class="nav-link" th:classappend="${activo == 'admin'} ? 'active'" th:href="@{/administracion}">Panel Admin</a></li>
             <li class="nav-item"><span class="nav-link" th:text="${session.usuarioNombre}"></span></li>
             <li class="nav-item"><form class="m-0" th:action="@{/logout}" method="post">

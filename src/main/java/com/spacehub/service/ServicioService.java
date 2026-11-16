@@ -26,15 +26,6 @@ public class ServicioService {
         return servicioRepository.findAll(Sort.by("id"));
     }
 
-    public Servicio buscarPorId(Long id) {
-        return servicioRepository.findById(id).orElse(null);
-    }
-
-    public List<Servicio> filtrarPorCategoria(String nombre) {
-        if (nombre == null || nombre.isBlank() || "Todos".equalsIgnoreCase(nombre)) return listarTodos();
-        return servicioRepository.findByCategoriaNombreIgnoreCaseOrderByIdAsc(nombre.trim());
-    }
-
     public List<Servicio> obtenerDestacados() {
         return servicioRepository.findTop3ByOrderByIdAsc();
     }
@@ -62,9 +53,28 @@ public class ServicioService {
 
     @Transactional
     public void guardar(com.spacehub.form.ServicioForm f) {
+        guardarDatos(f, null);
+    }
+
+    @Transactional
+    public void guardarPropio(com.spacehub.form.ServicioForm f, com.spacehub.model.Usuario propietario) {
+        if (f.getId() != null) exigirPropietario(f.getId(), propietario.getId());
+        guardarDatos(f, propietario);
+    }
+
+    public void exigirPropietario(Long id, Long propietarioId) {
+        var s = buscarObligatorio(id);
+        if (s.getPropietario() == null || !s.getPropietario().getId().equals(propietarioId))
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.FORBIDDEN);
+    }
+
+    public List<Servicio> listarPropios(Long id) { return servicioRepository.findByPropietarioIdOrderByIdDesc(id); }
+
+    private void guardarDatos(com.spacehub.form.ServicioForm f, com.spacehub.model.Usuario propietario) {
         if (!f.isImagenesValidas() || !f.isComodidadesValidas()) throw new IllegalArgumentException("Revise las imágenes y comodidades.");
         var categoria = categoriaRepository.findById(f.getCategoriaId()).orElseThrow(() -> new IllegalArgumentException("Seleccione una categoría existente."));
         var s = f.getId() == null ? new Servicio() : buscarObligatorio(f.getId());
+        if (f.getId() == null && propietario != null) s.setPropietario(propietario);
         s.setNombre(f.getNombre()); s.setCategoria(categoria); s.setDistrito(f.getDistrito());
         s.setDireccion(f.getDireccion()); s.setReferencia(f.getReferencia()); s.setPrecioPorHoraDecimal(f.getPrecioPorHora());
         s.setCapacidad(f.getCapacidad()); s.setEstado(f.getEstado()); s.setDescripcionCorta(f.getDescripcionCorta()); s.setDescripcion(f.getDescripcion());
@@ -87,5 +97,9 @@ public class ServicioService {
         if (reservas.existsByServicioId(id)) throw new IllegalArgumentException("No se puede eliminar el espacio porque tiene reservas asociadas.");
         servicioRepository.delete(s);
         servicioRepository.flush();
+    }
+
+    @Transactional public void eliminarPropio(Long id, Long propietarioId) {
+        exigirPropietario(id, propietarioId); eliminar(id);
     }
 }

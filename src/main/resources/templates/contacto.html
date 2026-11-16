@@ -22,11 +22,11 @@
     </div>
 
     <div class="row g-5">
-      <!-- El formulario valida los datos; todavía no guarda ni envía mensajes. -->
+      <!-- El formulario valida y guarda las consultas para administración. -->
       <div class="col-12 col-lg-6">
         <div class="card p-4">
-          <h4 class="mb-3"><i class="bi bi-chat-dots me-2"></i> Prueba el formulario</h4>
-          <p class="small text-muted">Formulario de demostración: los mensajes no se envían ni se guardan.</p>
+          <h4 class="mb-3"><i class="bi bi-chat-dots me-2"></i> Envíanos tu consulta</h4>
+          <p class="small text-muted">Tu mensaje se guardará para que lo revise el administrador.</p>
           <form th:action="@{/contacto}" method="POST" th:object="${contactoForm}">
           <div th:if="${#fields.hasAnyErrors()}" class="alert alert-danger" role="alert"><ul class="mb-0"><li th:each="err : ${#fields.allErrors()}" th:text="${err}"></li></ul></div>
 <input type="hidden" name="_csrf" th:value="${session.csrf}">
@@ -53,7 +53,7 @@
               <label class="form-label small fw-bold" for="mensaje">Mensaje</label>
               <textarea th:field="*{mensaje}" th:errorclass="is-invalid" class="form-control" rows="4" placeholder="Escribe tu consulta..." minlength="10" maxlength="2000" required></textarea>
             </div>
-            <button type="submit" class="btn btn-primary w-100">Validar mensaje</button>
+            <button type="submit" class="btn btn-primary w-100">Enviar mensaje</button>
           </form>
 
           <!-- Los canales de atención aún no están habilitados en la demostración. -->
@@ -114,7 +114,7 @@
             </h2>
             <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
               <div class="accordion-body small text-muted">
-                La creación y edición de espacios está disponible para el administrador. Las cuentas de propietario todavía no tienen un panel de publicación.
+                Regístrate como propietario e inicia sesión. Las cuentas de propietario pueden publicar y gestionar sus propios espacios desde Mis espacios.
               </div>
             </div>
           </div>

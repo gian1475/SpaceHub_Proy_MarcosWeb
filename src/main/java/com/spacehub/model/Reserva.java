@@ -50,9 +50,6 @@ public class Reserva {
         this.estado = estado;
     }
 
-    public double getHoras() {
-        return horaInicio == null || horaFin == null ? 0 : java.time.Duration.between(horaInicio, horaFin).toSeconds() / 3600.0;
-    }
     public String getDuracionTexto() {
         long minutos = horaInicio == null || horaFin == null ? 0 : java.time.Duration.between(horaInicio, horaFin).toMinutes();
         return (minutos / 60) + " h" + (minutos % 60 == 0 ? "" : " " + (minutos % 60) + " min");
@@ -78,16 +75,8 @@ public class Reserva {
         return usuario != null ? usuario.getNombres() + " " + usuario.getApellidos() : clienteNombre;
     }
 
-    public void setClienteNombre(String clienteNombre) {
-        this.clienteNombre = clienteNombre;
-    }
-
     public String getClienteCorreo() {
         return usuario != null ? usuario.getCorreo() : clienteCorreo;
-    }
-
-    public void setClienteCorreo(String clienteCorreo) {
-        this.clienteCorreo = clienteCorreo;
     }
 
     public LocalDate getFecha() {

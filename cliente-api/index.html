@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="es">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SpaceHub · Consulta API</title>
+<style>
+body{font:16px system-ui;background:#f1f5f9;color:#17243b;margin:0}main{max-width:1050px;margin:auto;padding:40px 24px}header{background:#17243b;color:white;padding:24px;border-radius:16px}label{display:block;margin:24px 0 8px}select,button{font:inherit;padding:10px;border:1px solid #aab8c9;border-radius:8px}#espacios{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}article{background:white;border:1px solid #d7e0eb;border-radius:12px;padding:20px}h2{font-size:20px}#estado{min-height:24px}small{color:#526580}
+</style>
+<main><header><h1>SpaceHub</h1><p>Encuentra un espacio para tu próxima reunión o evento.</p></header>
+<label for="categoria">Categoría</label><select id="categoria"><option value="">Todas las categorías</option></select>
+<button id="actualizar" type="button">Actualizar</button>
+<p id="estado" role="status" aria-live="polite"></p><section id="espacios" aria-label="Espacios"></section>
+<p><small>Demostración: cliente Node.js independiente que consulta la API REST de SpaceHub.</small></p></main>
+<script>
+const categoria=document.querySelector('#categoria'), estado=document.querySelector('#estado'), lista=document.querySelector('#espacios');
+let version=0;
+async function consultar(ruta){const r=await fetch(ruta);if(!r.ok)throw Error(r.status===502?'No se pudo conectar con SpaceHub. Inicia el servidor e intenta de nuevo.':'No se pudo completar la consulta.');return r.json();}
+function texto(tag,valor){const e=document.createElement(tag);e.textContent=valor;return e;}
+async function cargar(){const actual=++version;estado.textContent='Consultando espacios…';lista.replaceChildren();try{
+const datos=await consultar('/api/v1/espacios'+(categoria.value?'?categoriaId='+encodeURIComponent(categoria.value):''));if(actual!==version)return;
+for(const s of datos){const card=document.createElement('article');card.append(texto('h2',s.nombre),texto('p',s.categoria+' · '+s.distrito),texto('p',s.descripcion||''),texto('p',new Intl.NumberFormat('es-PE',{style:'currency',currency:s.moneda}).format(s.precioPorHora)+' por hora'),texto('p','Capacidad: '+s.capacidad+' · '+s.estado));lista.append(card);}
+estado.textContent=datos.length?datos.length+' espacios encontrados.':'No hay espacios en esta categoría.';
+}catch(e){if(actual===version)estado.textContent=e.message;}}
+async function iniciar(){try{const datos=await consultar('/api/v1/categorias');categoria.replaceChildren(new Option('Todas las categorías',''));for(const c of datos)categoria.add(new Option(c.nombre,c.id));await cargar();}catch(e){estado.textContent=e.message;}}
+categoria.addEventListener('change',cargar);document.querySelector('#actualizar').addEventListener('click',iniciar);iniciar();
+</script></html>

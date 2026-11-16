@@ -18,11 +18,13 @@ La [guía de instalación y demostración](database/README.md) explica la carga 
 
 ```powershell
 .\mvnw.cmd verify
-node --test src/test/js/interfaz.test.cjs
+node --test src/test/js/interfaz.test.cjs cliente-api/server.test.cjs
 ```
 
 Las pruebas Java usan H2 en memoria y no modifican MySQL. Las pruebas JavaScript requieren Node.js 18 o superior. Los archivos de compilación se generan en `target/`.
 
 ## Alcance
 
-Incluye catálogo, registro, sesiones, permisos administrativos, CRUD de categorías, espacios y reservas, listados con DTO y filtros Categoría → Espacio en dos páginas. Los pagos, el envío de mensajes y el panel de propietarios todavía no están implementados.
+La página **Consulta API** está disponible en `/consulta-api`. Para demostrar consumo fuera de Spring Boot, ejecuta `node cliente-api/server.cjs` en otra terminal y abre la dirección que indique la terminal con Spring iniciado. La API pública de consulta empieza en `/api/v1/categorias` y `/api/v1/espacios`.
+
+Incluye catálogo, registro, sesiones, permisos administrativos, CRUD de categorías, espacios y reservas, listados con DTO y filtros Categoría → Espacio en dos páginas. Incluye bandeja de mensajes de contacto para administradores y gestión de espacios y solicitudes para propietarios. Los pagos y el envío de correos no están implementados.

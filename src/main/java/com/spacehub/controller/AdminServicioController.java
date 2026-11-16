@@ -17,6 +17,13 @@ import org.springframework.dao.DataIntegrityViolationException;
 public class AdminServicioController {
     private final ServicioService servicios;
     public AdminServicioController(ServicioService servicios) { this.servicios = servicios; }
+    @ModelAttribute
+    public void prepararVista(Model model) {
+        model.addAttribute("baseEspacios", "/admin/servicios");
+        model.addAttribute("volverEspacios", "/admin/servicios");
+        model.addAttribute("panelEspacios", "/administracion");
+        model.addAttribute("vistaPropietario", false);
+    }
     @InitBinder("servicioForm")
     public void binder(WebDataBinder binder) {
         binder.setAllowedFields("id", "nombre", "categoriaId", "distrito", "direccion", "referencia", "precioPorHora",
@@ -24,9 +31,9 @@ public class AdminServicioController {
         binder.registerCustomEditor(String.class, new StringTrimmerEditor(false));
     }
     @GetMapping
-    public String listar(Model model) { model.addAttribute("servicios", servicios.listarTodos()); return "admin/servicios"; }
+    public String listar(Model model) { model.addAttribute("servicios", servicios.listarTodos()); return "espacios-gestion"; }
     private String formulario(Model model) {
-        model.addAttribute("categorias", servicios.listarCategorias()); return "admin/servicio-form";
+        model.addAttribute("categorias", servicios.listarCategorias()); return "espacio-form";
     }
     @GetMapping("/nuevo")
     public String nuevo(Model model) { model.addAttribute("servicioForm", new ServicioForm()); return formulario(model); }

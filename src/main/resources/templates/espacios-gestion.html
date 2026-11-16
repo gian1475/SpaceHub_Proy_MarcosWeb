@@ -12,16 +12,16 @@
 <th:block th:replace="~{fragments/header :: header('admin')}"></th:block>
 <main class="container py-4">
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
-<div><h1 class="h2">Espacios</h1><p class="text-muted mb-0">Administra el catálogo de espacios.</p></div>
-<div class="d-flex flex-wrap gap-2"><a class="btn btn-outline-dark" th:href="@{/administracion}">Volver al panel</a><a class="btn btn-primary" th:href="@{/admin/servicios/nuevo}">Nuevo espacio</a></div></div>
+<div><h1 class="h2" th:text="${vistaPropietario ? 'Mis espacios' : 'Espacios'}">Espacios</h1><p class="text-muted mb-0" th:text="${vistaPropietario ? 'Publica y administra tus propios espacios.' : 'Administra el catálogo de espacios.'}"></p></div>
+<div class="d-flex flex-wrap gap-2"><a class="btn btn-outline-dark" th:href="@{${panelEspacios}}" th:text="${vistaPropietario ? 'Solicitudes recibidas' : 'Volver al panel'}">Volver al panel</a><a class="btn btn-primary" th:href="@{${baseEspacios + '/nuevo'}}">Nuevo espacio</a></div></div>
 <div th:if="${error}" class="alert alert-danger" role="alert" th:text="${error}"></div>
 <div class="card shadow-sm"><div class="table-responsive"><table class="table align-middle mb-0">
 <thead><tr><th>Nombre</th><th>Categoría</th><th>Distrito</th><th>Precio/hora</th><th>Capacidad</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>
 <tr th:if="${#lists.isEmpty(servicios)}"><td colspan="7" class="text-center py-4">Todavía no hay espacios registrados.</td></tr>
 <tr th:each="s : ${servicios}"><td th:text="${s.nombre}"></td><td th:text="${s.categoria.nombre}"></td><td th:text="${s.distrito}"></td>
 <td class="text-nowrap" th:text="${'S/ ' + #numbers.formatDecimal(s.precioPorHora,1,'NONE',2,'POINT')}"></td><td th:text="${s.capacidad}"></td><td th:text="${s.estado}"></td>
-<td><div class="d-flex align-items-center gap-2 flex-nowrap"><a class="btn btn-sm btn-outline-secondary" th:href="@{/servicios/{id}(id=${s.id})}">Ver</a><a class="btn btn-sm btn-outline-dark" th:href="@{/admin/servicios/editar/{id}(id=${s.id})}">Editar</a>
-<form class="m-0" method="post" th:action="@{/admin/servicios/eliminar/{id}(id=${s.id})}" onsubmit="return confirm('¿Eliminar este espacio y sus fotos y comodidades?');">
+<td><div class="d-flex align-items-center gap-2 flex-nowrap"><a class="btn btn-sm btn-outline-secondary" th:href="@{/servicios/{id}(id=${s.id})}">Ver</a><a class="btn btn-sm btn-outline-dark" th:href="@{${baseEspacios + '/editar/' + s.id}}">Editar</a>
+<form class="m-0" method="post" th:action="@{${baseEspacios + '/eliminar/' + s.id}}" onsubmit="return confirm('¿Eliminar este espacio y sus fotos y comodidades?');">
 <input type="hidden" name="_csrf" th:value="${session.csrf}"><button class="btn btn-sm btn-outline-danger" type="submit">Eliminar</button></form></div></td></tr>
 </tbody></table></div></div>
 </main>

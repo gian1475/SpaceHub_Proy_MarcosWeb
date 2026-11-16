@@ -1,0 +1,16 @@
+<!doctype html><html lang="es" xmlns:th="http://www.thymeleaf.org"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mensajes · SpaceHub</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"><link rel="stylesheet" th:href="@{/css/styles.css}"></head>
+<body><th:block th:replace="~{fragments/header :: header('admin')}"></th:block>
+<main class="container py-4"><h1>Mensajes de contacto</h1><a th:href="@{/administracion}">Volver al panel</a>
+<form class="d-flex gap-2 my-3" method="get" th:action="@{/admin/mensajes}"><label for="atendido" class="form-label">Estado</label>
+<select id="atendido" name="atendido" class="form-select w-auto"><option value="">Todos</option><option value="false" th:selected="${atendido == false}">Pendientes</option><option value="true" th:selected="${atendido == true}">Atendidos</option></select><button class="btn btn-primary">Filtrar</button></form>
+<p th:if="${pagina.empty}">No hay mensajes para este filtro.</p>
+<article th:each="m : ${pagina.content}" class="card p-3 mb-3">
+<h2 class="h5" th:text="${m.nombre}"></h2><p><span th:text="${m.correo}"></span> · <span th:text="${m.motivo}"></span> · <time th:text="${#temporals.format(m.fecha,'dd/MM/yyyy HH:mm')}"></time></p>
+<p style="white-space:pre-wrap;overflow-wrap:anywhere" th:text="${m.mensaje}"></p>
+<p th:text="${m.atendido ? 'Atendido' : 'Pendiente'}"></p>
+<form method="post" th:action="@{/admin/mensajes/{id}/estado(id=${m.id})}"><input type="hidden" name="_csrf" th:value="${session.csrf}"><input type="hidden" name="atendido" th:value="${!m.atendido}"><button class="btn btn-outline-primary" th:text="${m.atendido ? 'Marcar pendiente' : 'Marcar atendido'}"></button></form>
+</article>
+<nav aria-label="Paginación de mensajes" class="d-flex gap-3"><a th:if="${pagina.hasPrevious()}" th:href="@{/admin/mensajes(pagina=${pagina.number-1},atendido=${atendido})}">Anterior</a><a th:if="${pagina.hasNext()}" th:href="@{/admin/mensajes(pagina=${pagina.number+1},atendido=${atendido})}">Siguiente</a></nav>
+</main><script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script></body></html>

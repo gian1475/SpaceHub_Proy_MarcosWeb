@@ -27,6 +27,14 @@ public class ReservaForm {
     public void setHoraFin(LocalTime horaFin) { this.horaFin=horaFin; }
     public String getEstado() { return estado; }
     public void setEstado(String estado) { this.estado=estado; }
+    @AssertTrue(message="La fecha debe estar entre los años 1000 y 9999.")
+    public boolean isFechaCompatible() { return fecha == null || (fecha.getYear() >= 1000 && fecha.getYear() <= 9999); }
+
+    @AssertTrue(message="Seleccione horas y minutos, sin segundos ni fracciones.")
+    public boolean isPrecisionHorarioValida() {
+        return (horaInicio == null || (horaInicio.getSecond() == 0 && horaInicio.getNano() == 0))
+                && (horaFin == null || (horaFin.getSecond() == 0 && horaFin.getNano() == 0));
+    }
     @AssertTrue(message="La reserva debe durar al menos una hora.")
     public boolean isDuracionValida() {
         return horaInicio == null || horaFin == null || !horaFin.isAfter(horaInicio)

@@ -10,6 +10,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 public class ContactoController {
+    private final com.spacehub.service.ContactoService mensajes;
+    public ContactoController(com.spacehub.service.ContactoService mensajes) { this.mensajes = mensajes; }
     @InitBinder("contactoForm")
     public void binder(org.springframework.web.bind.WebDataBinder binder) {
         binder.setAllowedFields("nombre","correo","motivo","mensaje");
@@ -20,7 +22,8 @@ public class ContactoController {
     @PostMapping("/contacto")
     public String procesarContacto(@Valid @ModelAttribute ContactoForm contactoForm, BindingResult errores, RedirectAttributes flash) {
         if (errores.hasErrors()) return "contacto";
-        flash.addFlashAttribute("mensaje","Datos validados. Este formulario de demostración no envía ni guarda mensajes.");
+        mensajes.guardar(contactoForm);
+        flash.addFlashAttribute("mensaje","Mensaje recibido. El administrador revisará tu consulta.");
         return "redirect:/contacto";
     }
 }
