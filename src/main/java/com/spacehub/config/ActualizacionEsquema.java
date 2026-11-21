@@ -21,6 +21,12 @@ public class ActualizacionEsquema {
             try (var connection = dataSource.getConnection()) {
                 if (!connection.getMetaData().getDatabaseProductName().equalsIgnoreCase("MySQL")) return;
                 try (var statement = connection.createStatement()) {
+                    try (var columns = connection.getMetaData().getColumns(connection.getCatalog(), null, "usuarios", "activo")) {
+                        if (!columns.next()) statement.executeUpdate("ALTER TABLE usuarios ADD COLUMN activo BIT NOT NULL DEFAULT 1");
+                    }
+                    try (var columns = connection.getMetaData().getColumns(connection.getCatalog(), null, "usuarios", "version_token")) {
+                        if (!columns.next()) statement.executeUpdate("ALTER TABLE usuarios ADD COLUMN version_token BIGINT NOT NULL DEFAULT 0");
+                    }
                     statement.executeUpdate("""
                         CREATE TABLE IF NOT EXISTS mensajes_contacto (
                         id BIGINT AUTO_INCREMENT PRIMARY KEY, nombre VARCHAR(100) NOT NULL,

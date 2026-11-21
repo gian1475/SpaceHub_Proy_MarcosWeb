@@ -4,14 +4,27 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const backend = process.env.SPACEHUB_API_URL || 'http://localhost:8080';
 const server = http.createServer(async (req, res) => {
-  if (req.method !== 'GET') { res.writeHead(405, { Allow: 'GET' }); return res.end(); }
   let url;
   try { url = new URL(req.url, 'http://localhost'); }
   catch { res.writeHead(400); return res.end('Solicitud inválida.'); }
-  if (url.pathname.startsWith('/api/v1/')) {
+  const login = url.pathname === '/api/auth/login';
+  if (req.method !== 'GET' && !(login && req.method === 'POST')) { res.writeHead(405, { Allow: 'GET' }); return res.end(); }
+  if (login || url.pathname.startsWith('/api/v1/')) {
     try {
+      let payload;
+      if (login && req.method === 'POST') {
+        const chunks = []; let size = 0;
+        for await (const chunk of req) {
+          size += chunk.length;
+          if (size > 8192) { res.writeHead(413); return res.end(); }
+          chunks.push(chunk);
+        }
+        payload = Buffer.concat(chunks);
+      }
       const upstream = await fetch(new URL(url.pathname + url.search, backend), {
-        signal: AbortSignal.timeout(5000), headers: { Accept: 'application/json' }, redirect: 'error'
+        method: req.method, body: payload,
+        signal: AbortSignal.timeout(5000), headers: { Accept: 'application/json', 'Content-Type': 'application/json',
+          ...(req.headers.authorization ? { Authorization: req.headers.authorization } : {}) }, redirect: 'error'
       });
       // Leer antes de enviar cabeceras permite devolver 502 si el backend corta el cuerpo.
       const body = await upstream.text();

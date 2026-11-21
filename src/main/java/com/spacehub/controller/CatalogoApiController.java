@@ -9,9 +9,9 @@ import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.util.List;
 
-/** API pública de consulta: nunca serializa entidades ni datos de usuarios. */
+/** Consulta autenticada con JWT: nunca serializa entidades ni datos de usuarios. */
 @RestController
-@RequestMapping("/api/v1")
+@RequestMapping({"/api/v1", "/api"})
 @Transactional(readOnly = true)
 public class CatalogoApiController {
     private final ServicioService servicios;
@@ -34,7 +34,7 @@ public class CatalogoApiController {
                 .map(c -> new CategoriaDTO(c.getId(), c.getNombre(), c.getDescripcion())).toList();
     }
 
-    @GetMapping("/espacios")
+    @GetMapping({"/espacios", "/servicios"})
     public List<EspacioDTO> espacios(@RequestParam(required = false) Long categoriaId) {
         if (categoriaId != null && servicios.listarCategorias().stream().noneMatch(c -> c.getId().equals(categoriaId)))
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La categoría no existe.");

@@ -6,7 +6,7 @@
 <link rel="stylesheet" th:href="@{/css/styles.css}"></head>
 <body><th:block th:replace="~{fragments/header :: header('api')}"></th:block>
 <main class="container py-5"><h1>Consulta de espacios</h1><p>Consulta el catálogo actualizado por categoría.</p>
-<form id="consulta" th:attr="data-api=@{/api/v1/}"><label class="form-label" for="categoria-api">Categoría</label>
+<form id="consulta" th:attr="data-api=@{/api/v1/},data-token=@{/sesion/token-api},data-csrf=${session.csrf}"><label class="form-label" for="categoria-api">Categoría</label>
 <select id="categoria-api" class="form-select mb-3"><option value="">Todas las categorías</option></select>
 <button class="btn btn-primary" type="submit">Consultar</button></form>
 <p id="estado-api" role="status" aria-live="polite" class="my-3"></p>

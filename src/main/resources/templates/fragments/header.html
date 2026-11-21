@@ -29,6 +29,7 @@
           </li>
 
           <th:block th:if="${session.usuarioId != null}">
+            <li class="nav-item" th:if="${session.usuarioRol == 'ADMIN'}"><a class="nav-link" th:href="@{/admin/usuarios}">Usuarios</a></li>
             <li class="nav-item" th:if="${session.usuarioRol == 'PROPIETARIO'}"><a class="nav-link" th:href="@{/propietario}">Mis espacios</a></li>
             <li class="nav-item" th:if="${session.usuarioRol == 'ADMIN'}"><a class="nav-link" th:href="@{/admin/mensajes}">Mensajes</a></li>
             <li class="nav-item" th:if="${session.usuarioRol == 'ADMIN'}"><a class="nav-link" th:classappend="${activo == 'admin'} ? 'active'" th:href="@{/administracion}">Panel Admin</a></li>

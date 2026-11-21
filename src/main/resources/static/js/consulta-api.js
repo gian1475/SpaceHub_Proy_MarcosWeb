@@ -2,8 +2,19 @@
   const form = document.querySelector('#consulta'), select = document.querySelector('#categoria-api');
   const status = document.querySelector('#estado-api'), body = document.querySelector('#resultados-api');
   let version = 0;
+  let token;
+  async function autenticar() {
+    const response = await fetch(form.dataset.token, { method: 'POST', headers: { 'X-CSRF-TOKEN': form.dataset.csrf } });
+    if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) throw new Error('Tu sesión venció. Vuelve a iniciar sesión.');
+    token = (await response.json()).access_token;
+  }
   async function get(route) {
-    const response = await fetch(form.dataset.api + route);
+    if (!token) await autenticar();
+    let response = await fetch(form.dataset.api + route, { headers: { Authorization: 'Bearer ' + token } });
+    if (response.status === 401) {
+      await autenticar();
+      response = await fetch(form.dataset.api + route, { headers: { Authorization: 'Bearer ' + token } });
+    }
     if (!response.ok) throw new Error('No se pudo consultar el catálogo. Intenta de nuevo.');
     return response.json();
   }

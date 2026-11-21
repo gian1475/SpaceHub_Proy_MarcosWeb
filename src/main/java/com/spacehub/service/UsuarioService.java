@@ -44,6 +44,7 @@ public class UsuarioService {
         var encontrado = usuarioRepository.findByCorreoIgnoreCase(correo.trim());
         if (encontrado.isEmpty()) return Optional.empty();
         var usuario = encontrado.get();
+        if (!usuario.isActivo()) return Optional.empty();
         String guardada = usuario.getPassword();
         if (guardada.startsWith("$2")) {
             return encoder.matches(password, guardada) ? encontrado : Optional.empty();

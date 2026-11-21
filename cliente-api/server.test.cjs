@@ -2,7 +2,18 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const http = require('node:http');
 test('cliente independiente sirve la página, consulta Spring y maneja su caída', async () => {
-  const backend = http.createServer((req,res) => {
+  const backend = http.createServer(async (req,res) => {
+    if (req.url === '/api/auth/login') {
+      assert.equal(req.method,'POST');
+      assert.equal(req.headers['content-type'],'application/json');
+      let body=''; for await (const chunk of req) body+=chunk;
+      assert.equal(JSON.parse(body).correo,'prueba@example.com');
+      res.setHeader('Content-Type','application/json');
+      return res.end(JSON.stringify({access_token:'token-de-prueba',token_type:'Bearer',expires_in:3600}));
+    }
+    if (req.headers.authorization !== 'Bearer token-de-prueba') {
+      res.writeHead(401,{'Content-Type':'application/json'}); return res.end('{"mensaje":"Token requerido"}');
+    }
     if (req.url === '/api/v1/interrumpida') {
       res.writeHead(200, { 'Content-Type': 'application/json', 'Content-Length': '1000' });
       res.write('{');
@@ -20,7 +31,12 @@ test('cliente independiente sirve la página, consulta Spring y maneja su caída
   const base = 'http://127.0.0.1:' + server.address().port;
   try {
     assert.match(await (await fetch(base)).text(), /SpaceHub/);
-    const result = await fetch(base+'/api/v1/espacios?categoriaId=3');
+    assert.equal((await fetch(base+'/api/v1/espacios?categoriaId=3')).status,401);
+    const login = await fetch(base+'/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({correo:'prueba@example.com',password:'clave-prueba'})});
+    assert.equal(login.status,200);
+    assert.equal((await login.json()).access_token,'token-de-prueba');
+    const headers = {Authorization:'Bearer token-de-prueba'};
+    const result = await fetch(base+'/api/v1/espacios?categoriaId=3',{headers});
     assert.equal(result.status,200);
     assert.equal((await result.json())[0].id,7);
     assert.equal((await fetch(base+'/secreto')).status,404);
@@ -31,7 +47,7 @@ test('cliente independiente sirve la página, consulta Spring y maneja su caída
       }).on('error', reject);
     });
     assert.equal(malformed,400);
-    const interrupted = await fetch(base+'/api/v1/interrumpida');
+    const interrupted = await fetch(base+'/api/v1/interrumpida',{headers});
     assert.equal(interrupted.status,502);
     assert.match((await interrupted.json()).mensaje,/No se pudo conectar/);
     assert.equal((await fetch(base)).status,200);

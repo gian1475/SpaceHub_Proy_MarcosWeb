@@ -2,6 +2,9 @@ package com.spacehub;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(properties = {
     "spring.datasource.url=jdbc:h2:mem:spacehub;MODE=MySQL;DB_CLOSE_DELAY=-1",
@@ -12,6 +15,128 @@ import org.springframework.boot.test.context.SpringBootTest;
 })
 @org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 class SpacehubApplicationTests {
+    @Test @org.springframework.transaction.annotation.Transactional
+    void reactivarCuentaNoRestauraSesionWebAnterior() throws Exception {
+        var rol = new com.spacehub.model.Rol(null,"CLIENTE"); entityManager.persist(rol);
+        var usuario = new com.spacehub.model.Usuario(null,"Sesion","Revocada","sesion-revocada@example.com","999000000","cliente123",rol);
+        entityManager.persist(usuario); entityManager.flush();
+        var libre = sinSesion();
+        var pagina = libre.perform(get("/login")).andReturn();
+        var inicial = (org.springframework.mock.web.MockHttpSession)pagina.getRequest().getSession();
+        var acceso = libre.perform(post("/login").session(inicial).param("_csrf",(String)inicial.getAttribute("csrf"))
+                .param("correo",usuario.getCorreo()).param("password","cliente123")).andExpect(redirectedUrl("/")).andReturn();
+        var conectada = (org.springframework.mock.web.MockHttpSession)acceso.getRequest().getSession();
+        libre.perform(get("/reservas").session(conectada)).andExpect(status().isOk());
+        // Desactivar y reactivar antes de que el navegador vuelva a enviar una petición.
+        adminUsuarios.actualizar(usuario.getId(),"CLIENTE",false,adminPruebas);
+        adminUsuarios.actualizar(usuario.getId(),"CLIENTE",true,adminPruebas);
+        libre.perform(get("/reservas").session(conectada)).andExpect(redirectedUrl("/login"));
+        assertNull(conectada.getAttribute("usuarioId"));
+    }
+    @Test @org.springframework.transaction.annotation.Transactional
+    void apiSiempreDevuelveJsonYRechazaClaimsInvalidos() throws Exception {
+        var libre = sinSesion();
+        String valido = tokenPara(adminPruebas);
+        for(Object version : java.util.List.of("incorrecta",0.5)) {
+            var claims = org.springframework.security.oauth2.jwt.JwtClaimsSet.builder().issuer("spacehub").subject(adminPruebas.toString())
+                    .issuedAt(java.time.Instant.now()).expiresAt(java.time.Instant.now().plusSeconds(3600)).claim("version",version).build();
+            String token = jwtEncoder.encode(org.springframework.security.oauth2.jwt.JwtEncoderParameters.from(
+                    org.springframework.security.oauth2.jwt.JwsHeader.with(org.springframework.security.oauth2.jose.jws.MacAlgorithm.HS256).build(),claims)).getTokenValue();
+            libre.perform(get("/api/servicios").header("Authorization","Bearer "+token)).andExpect(status().isUnauthorized())
+                    .andExpect(content().contentTypeCompatibleWith("application/json")).andExpect(jsonPath("$.mensaje").isNotEmpty());
+        }
+        var claims = org.springframework.security.oauth2.jwt.JwtClaimsSet.builder().issuer("spacehub").subject(adminPruebas.toString()).claim("version",0).build();
+        String sinVencimiento = jwtEncoder.encode(org.springframework.security.oauth2.jwt.JwtEncoderParameters.from(
+                org.springframework.security.oauth2.jwt.JwsHeader.with(org.springframework.security.oauth2.jose.jws.MacAlgorithm.HS256).build(),claims)).getTokenValue();
+        libre.perform(get("/api/servicios").header("Authorization","Bearer "+sinVencimiento)).andExpect(status().isUnauthorized());
+        libre.perform(get("/api/servicios").header("Authorization","Bearer alterado")).andExpect(status().isUnauthorized())
+                .andExpect(content().contentTypeCompatibleWith("application/json"));
+        libre.perform(get("/api/v1/espacios/-1").header("Authorization","Bearer "+valido).accept("text/html"))
+                .andExpect(status().isNotFound()).andExpect(jsonPath("$.mensaje").isNotEmpty());
+        libre.perform(post("/api/reservas").header("Authorization","Bearer "+valido).contentType("application/json").content("{no-es-json"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.mensaje").isNotEmpty());
+    }
+    @org.springframework.beans.factory.annotation.Autowired private com.spacehub.service.TokenService tokens;
+    @org.springframework.beans.factory.annotation.Autowired private com.spacehub.service.AdminUsuarioService adminUsuarios;
+    @org.springframework.beans.factory.annotation.Autowired private com.spacehub.repository.UsuarioRepository repoUsuarios;
+    @org.springframework.beans.factory.annotation.Autowired private org.springframework.security.oauth2.jwt.JwtEncoder jwtEncoder;
+    @org.springframework.beans.factory.annotation.Autowired private com.fasterxml.jackson.databind.ObjectMapper json;
+
+    private String tokenPara(Long id) { return tokens.emitir(repoUsuarios.findOneById(id).orElseThrow()).access_token(); }
+    private org.springframework.test.web.servlet.MockMvc sinSesion() {
+        return org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup(webContext)
+                .apply(org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity()).build();
+    }
+    @Test @org.springframework.transaction.annotation.Transactional
+    void jwtExigeFirmaVigenciaYAislaReservasPorUsuario() throws Exception {
+        var libre = sinSesion(); var espacio = espacioParaRevision();
+        var rol = new com.spacehub.model.Rol(null,"CLIENTE"); entityManager.persist(rol);
+        var cliente = new com.spacehub.model.Usuario(null,"Cliente","JWT","jwt@example.com","999000000","cliente123",rol);
+        entityManager.persist(cliente); entityManager.flush();
+        // Incluso una sesión web de administrador no sustituye al JWT.
+        mvc.perform(get("/api/v1/espacios")).andExpect(status().isUnauthorized());
+        libre.perform(post("/api/auth/login").contentType("application/json").content("{\"correo\":\"jwt@example.com\",\"password\":\"incorrecta\"}"))
+                .andExpect(status().isUnauthorized());
+        var login = libre.perform(post("/api/auth/login").contentType("application/json").content("{\"correo\":\"jwt@example.com\",\"password\":\"cliente123\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.token_type").value("Bearer"))
+                .andExpect(cookie().doesNotExist("JSESSIONID")).andReturn();
+        String token = json.readTree(login.getResponse().getContentAsString()).get("access_token").asText();
+        libre.perform(get("/api/servicios").header("Authorization","Bearer "+token)).andExpect(status().isOk());
+        libre.perform(get("/api/reservas").header("Authorization","Bearer inventado")).andExpect(status().isUnauthorized());
+        var partes = token.split("\\."); partes[2] = (partes[2].startsWith("A") ? "B" : "A") + partes[2].substring(1);
+        libre.perform(get("/api/reservas").header("Authorization","Bearer "+String.join(".",partes))).andExpect(status().isUnauthorized());
+        var claims = org.springframework.security.oauth2.jwt.JwtClaimsSet.builder().issuer("spacehub").subject(cliente.getId().toString())
+                .issuedAt(java.time.Instant.now().minusSeconds(7200)).expiresAt(java.time.Instant.now().minusSeconds(3600)).claim("version",0).build();
+        String vencido = jwtEncoder.encode(org.springframework.security.oauth2.jwt.JwtEncoderParameters.from(
+                org.springframework.security.oauth2.jwt.JwsHeader.with(org.springframework.security.oauth2.jose.jws.MacAlgorithm.HS256).build(),claims)).getTokenValue();
+        libre.perform(get("/api/reservas").header("Authorization","Bearer "+vencido)).andExpect(status().isUnauthorized());
+        var fecha = java.time.LocalDate.now(java.time.ZoneId.of("America/Lima")).plusDays(6);
+        reservaService.crearReserva(espacio.getId(),adminPruebas,fecha,java.time.LocalTime.of(8,0),java.time.LocalTime.of(9,0));
+        String entrada = "{\"servicioId\":"+espacio.getId()+",\"fecha\":\""+fecha+"\",\"horaInicio\":\"10:00\",\"horaFin\":\"11:30\",\"usuarioId\":"+adminPruebas+",\"estado\":\"Aprobada\"}";
+        libre.perform(post("/api/reservas").header("Authorization","Bearer "+token).contentType("application/json").content(entrada))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.total").value(68.25)).andExpect(jsonPath("$.estado").value("Pendiente"));
+        libre.perform(get("/api/reservas").header("Authorization","Bearer "+token))
+                .andExpect(status().isOk()).andExpect(jsonPath("$",org.hamcrest.Matchers.hasSize(1)));
+        libre.perform(post("/api/reservas").header("Authorization","Bearer "+token).contentType("application/json").content(entrada))
+                .andExpect(status().isBadRequest());
+        libre.perform(post("/api/reservas").header("Authorization","Bearer "+token).contentType("application/json").content("{}"))
+                .andExpect(status().isBadRequest());
+        libre.perform(get("/api/admin/prueba").header("Authorization","Bearer "+token)).andExpect(status().isForbidden());
+    }
+    @Test @org.springframework.transaction.annotation.Transactional
+    void adminGestionaUsuariosRevocaTokensYProtegeSuCuenta() throws Exception {
+        var rol = new com.spacehub.model.Rol(null,"CLIENTE"); entityManager.persist(rol);
+        var propietario = new com.spacehub.model.Rol(null,"PROPIETARIO"); entityManager.persist(propietario);
+        var cliente = new com.spacehub.model.Usuario(null,"Gestion","Prueba","gestion@example.com","999000000","cliente123",rol);
+        entityManager.persist(cliente); entityManager.flush();
+        String viejo = tokenPara(cliente.getId()); var libre = sinSesion();
+        mvc.perform(get("/admin/usuarios")).andExpect(status().isOk()).andExpect(content().string(org.hamcrest.Matchers.containsString("gestion@example.com")));
+        mvc.perform(post("/admin/usuarios/{id}/guardar",adminPruebas).param("rol","CLIENTE"))
+                .andExpect(flash().attributeExists("error"));
+        assertTrue(repoUsuarios.findOneById(adminPruebas).orElseThrow().isActivo());
+        mvc.perform(post("/admin/usuarios/{id}/guardar",cliente.getId()).param("rol","inventado").param("activo","true"))
+                .andExpect(flash().attributeExists("error"));
+        mvc.perform(post("/admin/usuarios/{id}/guardar",cliente.getId()).param("rol","PROPIETARIO").param("activo","true"))
+                .andExpect(flash().attributeExists("mensaje"));
+        assertEquals("PROPIETARIO",cliente.getRol().getNombre());
+        libre.perform(get("/api/servicios").header("Authorization","Bearer "+viejo)).andExpect(status().isUnauthorized());
+        String nuevo = tokenPara(cliente.getId());
+        var sesion = new org.springframework.mock.web.MockHttpSession(); sesion.setAttribute("usuarioId",cliente.getId()); sesion.setAttribute("versionSesion",cliente.getVersionToken()); sesion.setAttribute("csrf","cliente-token");
+        libre.perform(get("/admin/usuarios").session(sesion)).andExpect(status().isForbidden());
+        libre.perform(post("/admin/usuarios/{id}/guardar",adminPruebas).session(sesion).param("_csrf","cliente-token").param("rol","CLIENTE"))
+                .andExpect(status().isForbidden());
+        libre.perform(get("/propietario").session(sesion)).andExpect(status().isOk());
+        adminUsuarios.actualizar(cliente.getId(),"PROPIETARIO",false,adminPruebas);
+        libre.perform(get("/api/servicios").header("Authorization","Bearer "+nuevo)).andExpect(status().isUnauthorized());
+        libre.perform(get("/propietario").session(sesion)).andExpect(redirectedUrl("/login"));
+        assertTrue(usuarioService.validarLogin("gestion@example.com","cliente123").isEmpty());
+        libre.perform(post("/api/auth/login").contentType("application/json").content("{\"correo\":\"gestion@example.com\",\"password\":\"cliente123\"}"))
+                .andExpect(status().isUnauthorized());
+        adminUsuarios.actualizar(cliente.getId(),"PROPIETARIO",true,adminPruebas);
+        libre.perform(get("/api/servicios").header("Authorization","Bearer "+nuevo)).andExpect(status().isUnauthorized());
+        assertTrue(usuarioService.validarLogin("gestion@example.com","cliente123").isPresent());
+        mvc.perform(post("/sesion/token-api")).andExpect(status().isOk()).andExpect(jsonPath("$.access_token").isNotEmpty());
+    }
     @Test
     @org.springframework.transaction.annotation.Transactional
     void reservasRechazanFraccionesYFechasFueraDeMySQLSinGuardar() throws Exception {
@@ -74,7 +199,7 @@ class SpacehubApplicationTests {
         var otro = new com.spacehub.model.Usuario(null,"Dueno","Dos","dueno2@example.com","999000001","demo12345",rol);
         entityManager.persist(dueno); entityManager.persist(otro);
         var espacio = espacioParaRevision(); espacio.setPropietario(dueno); entityManager.flush();
-        var sesion = new org.springframework.mock.web.MockHttpSession(); sesion.setAttribute("usuarioId",dueno.getId()); sesion.setAttribute("csrf","propietario-token");
+        var sesion = new org.springframework.mock.web.MockHttpSession(); sesion.setAttribute("usuarioId",dueno.getId()); sesion.setAttribute("versionSesion",dueno.getVersionToken()); sesion.setAttribute("csrf","propietario-token");
         var propietario = org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup(webContext).apply(org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity())
                 .defaultRequest(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/").session(sesion).param("_csrf","propietario-token")).build();
         for (String ruta : java.util.List.of("/propietario", "/propietario/espacios/nuevo", "/propietario/espacios/editar/"+espacio.getId(), "/propietario/reservas"))
@@ -118,9 +243,10 @@ class SpacehubApplicationTests {
     }
     @Test
     @org.springframework.transaction.annotation.Transactional
-    void apiPublicaExponeSoloCatalogoYValidaFiltros() throws Exception {
+    void apiJwtExponeSoloCatalogoYValidaFiltros() throws Exception {
         var espacio = espacioParaRevision();
-        var publico = org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup(webContext).apply(org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity()).build();
+        var publico = org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup(webContext).apply(org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity())
+                .defaultRequest(get("/").header("Authorization","Bearer "+tokenPara(adminPruebas))).build();
         publico.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v1/espacios/{id}", espacio.getId()))
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.moneda").value("PEN"))
@@ -136,7 +262,7 @@ class SpacehubApplicationTests {
         publico.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/v1/espacios/-1"))
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isNotFound());
         publico.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/v1/espacios"))
-                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden());
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isMethodNotAllowed());
     }
     @org.springframework.beans.factory.annotation.Autowired
     private com.spacehub.service.ServicioService servicioService;
@@ -159,7 +285,7 @@ class SpacehubApplicationTests {
             entityManager.persist(usuario); entityManager.flush(); return usuario.getId();
         });
         var sesion = new org.springframework.mock.web.MockHttpSession();
-        sesion.setAttribute("usuarioId", adminPruebas); sesion.setAttribute("csrf", "token-prueba");
+        sesion.setAttribute("usuarioId", adminPruebas); sesion.setAttribute("versionSesion",0L); sesion.setAttribute("csrf", "token-prueba");
         mvc = org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup(webContext).apply(org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity())
                 .defaultRequest(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/")
                         .session(sesion).param("_csrf","token-prueba")).build();

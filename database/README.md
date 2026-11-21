@@ -1,6 +1,38 @@
 http://localhost:8080
 
-# SpaceHub Guía del avance 3 y ejecución
+# SpaceHub Guía de instalación y ejecución
+
+## JWT y gestión de usuarios
+
+ADMIN dispone de `/admin/usuarios` para listar cuentas, cambiar entre ADMIN, CLIENTE y PROPIETARIO y activar o desactivar usuarios. No puede quitarse su propio rol ni desactivar su cuenta. Los cambios de rol o estado revocan los JWT anteriores. Las cuentas desactivadas no pueden iniciar sesión ni usar sesiones web existentes.
+
+La API REST requiere `Authorization: Bearer <token>`. Las cookies del login web no autorizan la API. El catálogo web `/servicios` permanece público; `/consulta-api` requiere sesión y obtiene un JWT mediante un POST protegido por CSRF. El cliente Node solicita correo y contraseña y conserva el token solo en memoria.
+
+| Método | Endpoint | Uso |
+| --- | --- | --- |
+| POST | `/api/auth/login` | JSON con `correo` y `password`; devuelve `access_token`, `token_type` y `expires_in`. |
+| GET | `/api/servicios` | Catálogo, con JWT. También disponible como `/api/v1/espacios`. |
+| GET | `/api/v1/categorias` | Categorías, con JWT. |
+| GET | `/api/reservas` | Solo las reservas del usuario del token. |
+| POST | `/api/reservas` | Crea una solicitud con `servicioId`, `fecha`, `horaInicio` y `horaFin`. El usuario y el estado inicial se fijan en el servidor. |
+
+Los tokens usan firma HS256, emisor `spacehub` y duración de una hora. Se validan la firma, vencimiento, cuenta activa y versión de revocación. Sin token, con uno alterado, vencido o revocado, la API responde 401; sin permisos, 403.
+
+Prueba desde PowerShell con una cuenta web activa:
+
+```powershell
+$credencialesApi = Get-Credential -Message 'Cuenta web de SpaceHub'
+$cuerpoApi = @{ correo = $credencialesApi.UserName; password = $credencialesApi.GetNetworkCredential().Password } | ConvertTo-Json
+$accesoApi = Invoke-RestMethod http://localhost:8080/api/auth/login -Method Post -ContentType 'application/json' -Body $cuerpoApi
+$cabecerasApi = @{ Authorization = "Bearer $($accesoApi.access_token)" }
+Invoke-RestMethod http://localhost:8080/api/servicios -Headers $cabecerasApi
+Invoke-RestMethod http://localhost:8080/api/reservas -Headers $cabecerasApi
+Remove-Variable cuerpoApi,credencialesApi
+```
+
+Sin configuración adicional se genera una clave aleatoria al arrancar, por lo que reiniciar Spring invalida los tokens anteriores. Para conservar la clave entre arranques, configura `SPACEHUB_JWT_SECRET` con al menos 32 bytes aleatorios codificados en Base64 antes de iniciar Spring. No guardes esa clave en Git.
+
+La actualización de MySQL añade automáticamente `usuarios.activo` y `usuarios.version_token` sin borrar cuentas. No vuelvas a importar el seed en una base existente. Para ejecutar el consumidor independiente: `node cliente-api/server.cjs` y abrir la dirección que imprime la terminal.
 
 Esta guía explica lo que implementamos y cómo ejecutar SpaceHub desde VS Code, PowerShell y MySQL Workbench en Windows.
 
@@ -8,7 +40,7 @@ Esta guía explica lo que implementamos y cómo ejecutar SpaceHub desde VS Code,
 
 ### Paso 1. Diseñar la base de datos
 
-Creamos `spacehub_db` con siete tablas y seis claves foráneas:
+Creamos `spacehub_db` con ocho tablas y siete claves foráneas:
 
 | Tabla | Función y relaciones |
 | --- | --- |
@@ -19,6 +51,7 @@ Creamos `spacehub_db` con siete tablas y seis claves foráneas:
 | `servicio_incluidos` | Comodidades de cada espacio, como WiFi. |
 | `servicio_imagenes` | Fotografías por URL, asociadas a cada espacio. |
 | `reservas` | Solicitudes relacionadas con un usuario y un espacio. |
+| `mensajes_contacto` | Consultas recibidas y estado de atención. |
 
 Definimos claves primarias autoincrementales, restricciones de integridad, correos y nombres de categoría únicos e importes `DECIMAL(10,2)`.
 
@@ -71,7 +104,7 @@ Agregamos listado administrativo, edición de fecha y horario, aprobación, rech
 
 Comprobamos persistencia, CRUD, sesiones, permisos, validaciones y solicitudes simultáneas. Corregimos la carga del rol al verificar la sesión, las tildes, la alineación de botones y el límite de importe de las reservas.
 
-También validamos contacto. **El formulario de contacto es demostrativo: no envía ni guarda mensajes.**
+También validamos contacto. El formulario de contacto guarda mensajes en MySQL; ADMIN puede consultarlos y marcarlos como atendidos en `/admin/mensajes`. No envía correos.
 
 Las pruebas automáticas usan H2 aislado. El resultado de cada ejecución queda en `target/surefire-reports/`. La revisión funcional con MySQL y la revisión visual deben comprobarse por separado.
 
@@ -105,7 +138,7 @@ Este apartado se hace una sola vez en una instalación nueva. **Si ya importaste
 1. Inicia MySQL como se explica en el apartado 4.
 2. Abre Workbench y entra a tu conexión local.
 3. Comprueba si existe `spacehub_db`. Si contiene datos propios, revisa su estructura antes de importar; estos scripts no son migraciones.
-4. Abre y ejecuta completo [01_schema.sql](01_schema.sql): crea la base y las siete tablas.
+4. Abre y ejecuta completo [01_schema.sql](01_schema.sql): crea la base y las ocho tablas.
 5. Ejecuta [02_seed.sql](02_seed.sql) una sola vez sobre las tablas vacías: carga los ejemplos. Si falla, ejecuta `ROLLBACK;` en esa misma conexión y revisa el error antes de continuar.
 6. Ejecuta [03_verify.sql](03_verify.sql): muestra tablas, cantidades y relaciones.
 
@@ -120,8 +153,9 @@ En Workbench puedes ejecutar el archivo completo con Ctrl + Shift + Enter, sin u
 | servicio_incluidos | 30 |
 | servicio_imagenes | 18 |
 | reservas | 3 |
+| mensajes_contacto | 0 |
 
-Deben existir siete tablas y seis claves foráneas. Las cantidades cambian si ya hiciste pruebas. El diagrama y los campos están en [modelo-relacional.md](modelo-relacional.md).
+Deben existir ocho tablas y siete claves foráneas. Las cantidades cambian si ya hiciste pruebas. Los campos y relaciones están definidos en `01_schema.sql`.
 
 **No vuelvas a ejecutar el seed para encender la web.** Puede provocar errores de IDs duplicados. `IF NOT EXISTS` del esquema tampoco actualiza tablas preexistentes.
 
@@ -224,11 +258,11 @@ Al entrar correctamente, una contraseña antigua puede convertirse a hash en MyS
 | http://localhost:8080/admin/categorias | CRUD de categorías, solo ADMIN |
 | http://localhost:8080/admin/servicios | CRUD de espacios, solo ADMIN |
 | http://localhost:8080/admin/reservas | CRUD de reservas, solo ADMIN |
-| http://localhost:8080/contacto | Formulario demostrativo con validaciones |
+| http://localhost:8080/contacto | Formulario de contacto que guarda consultas |
 
 Prueba recomendada:
 
-1. Entra como administrador y comprueba los tres CRUD.
+1. Entra como administrador y comprueba la gestión de categorías, espacios, reservas, usuarios y mensajes.
 2. Registra una categoría y un espacio de prueba. Edítalos y verifica los cambios en Workbench.
 3. Pulsa Salir e inicia sesión como cliente.
 4. Solicita una reserva futura desde el detalle de un espacio Disponible.
@@ -322,7 +356,7 @@ Si persiste un error, revisa el primer mensaje `ERROR` y la sección `Caused by`
 
 ## 11. Alcance y entrega
 
-El avance incluye MySQL, siete tablas relacionadas, JPA/Hibernate, tres CRUD, validaciones, sesiones y pruebas. No incluye pagos, envío de consultas de contacto, notificaciones, recuperación de contraseña ni panel propio de propietarios.
+El avance incluye MySQL, ocho tablas relacionadas, JPA/Hibernate, gestión de categorías, espacios, reservas, usuarios y mensajes, validaciones, sesiones y pruebas. Incluye contacto persistido y panel de propietarios para publicar espacios y gestionar sus solicitudes. No incluye pagos, notificaciones por correo ni recuperación de contraseña.
 
 La entrega debe acompañarse del código, los tres scripts SQL, el informe actualizado, el diagrama EER y las capturas de CRUD y validaciones. La preparación de esos documentos y la actualización del repositorio se comprueban por separado: generar el JAR no publica cambios en GitHub.
 
@@ -373,12 +407,12 @@ El lanzador pide las credenciales de MySQL y ejecuta `mvnw.cmd spring-boot:run` 
 - Las reservas pasadas o de espacios ocupados no se pueden aprobar ni reactivar. Se pueden rechazar para conservar el historial.
 - La búsqueda del catálogo ignora tildes y muestra un aviso cuando no encuentra coincidencias.
 - Las pantallas de error 400, 403, 404 y 500 ofrecen una salida a la navegación.
-- El registro y las preguntas frecuentes aclaran que la publicación es administrativa y el contacto es demostrativo.
+- El registro permite crear cuentas CLIENTE o PROPIETARIO; el propietario publica sus espacios y el administrador revisa las consultas de contacto.
 - El seed incluye hashes BCrypt. Esto solo afecta a instalaciones nuevas: no vuelvas a importarlo sobre datos existentes. Las cuentas antiguas mantienen la migración al iniciar sesión.
 - Las pruebas de reservas usan fechas relativas para que no dejen de funcionar al cambiar el calendario.
 
 Las pruebas de JavaScript pueden ejecutarse con Node.js 18 o superior:
 
 ```powershell
-node --test src/test/js/interfaz.test.cjs
+node --test src/test/js/interfaz.test.cjs cliente-api/server.test.cjs cliente-api/interfaz.test.cjs
 ```

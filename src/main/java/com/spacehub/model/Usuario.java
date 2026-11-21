@@ -8,6 +8,14 @@ public class Usuario {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    @Column(nullable = false)
+    private boolean activo = true;
+    @Column(name = "version_token", nullable = false)
+    private long versionToken;
+    public boolean isActivo() { return activo; }
+    public void setActivo(boolean activo) { this.activo = activo; }
+    public long getVersionToken() { return versionToken; }
+    public void revocarTokens() { versionToken++; }
     @Column(nullable = false, length = 80)
     private String nombres;
     @Column(nullable = false, length = 80)

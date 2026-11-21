@@ -7,7 +7,12 @@ UNION ALL SELECT 'categorias', COUNT(*) FROM categorias
 UNION ALL SELECT 'servicios', COUNT(*) FROM servicios
 UNION ALL SELECT 'servicio_incluidos', COUNT(*) FROM servicio_incluidos
 UNION ALL SELECT 'servicio_imagenes', COUNT(*) FROM servicio_imagenes
-UNION ALL SELECT 'reservas', COUNT(*) FROM reservas;
+UNION ALL SELECT 'reservas', COUNT(*) FROM reservas
+UNION ALL SELECT 'mensajes_contacto', COUNT(*) FROM mensajes_contacto;
+
+SELECT u.id, u.nombres, u.apellidos, u.correo, r.nombre AS rol, u.activo
+FROM usuarios u JOIN roles r ON r.id = u.rol_id
+ORDER BY u.id;
 
 SELECT r.id, u.correo, s.nombre, c.nombre AS categoria,
        r.fecha, r.hora_inicio, r.hora_fin, r.total, r.estado

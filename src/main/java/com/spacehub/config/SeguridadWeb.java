@@ -65,8 +65,11 @@ public class SeguridadWeb {
                 // El login valida credenciales y renueva la sesion. Releer el rol permite revocarlo inmediatamente.
                 if (session != null && session.getAttribute("usuarioId") instanceof Long id) {
                     var usuario = usuarios.findOneById(id).orElse(null);
-                    if (usuario == null) {
+                    Object version = session.getAttribute("versionSesion");
+                    if (usuario == null || !usuario.isActivo() || !(version instanceof Long)
+                            || ((Long) version).longValue() != usuario.getVersionToken()) {
                         session.removeAttribute("usuarioId"); session.removeAttribute("usuarioNombre"); session.removeAttribute("usuarioRol");
+                        session.removeAttribute("versionSesion");
                         SecurityContextHolder.clearContext();
                     } else {
                         session.setAttribute("usuarioNombre", usuario.getNombres());
@@ -86,7 +89,7 @@ public class SeguridadWeb {
                 .dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.FORWARD).permitAll()
                 .requestMatchers("/administracion", "/administracion/**", "/admin", "/admin/**").hasRole("ADMIN")
                 .requestMatchers("/propietario", "/propietario/**").hasRole("PROPIETARIO")
-                .requestMatchers("/reservas", "/reservas/**").authenticated()
+                .requestMatchers("/reservas", "/reservas/**", "/consulta-api", "/sesion/token-api").authenticated()
                 .anyRequest().permitAll())
             .exceptionHandling(e -> e.authenticationEntryPoint((request, response, ex) ->
                     response.sendRedirect(request.getContextPath() + "/login")))

@@ -45,6 +45,7 @@ public class AuthController {
         session.setAttribute("usuarioId", u.getId());
         session.setAttribute("usuarioNombre", u.getNombres());
         session.setAttribute("usuarioRol", u.getRol().getNombre());
+        session.setAttribute("versionSesion", u.getVersionToken());
         SeguridadWeb.token(session);
         flash.addFlashAttribute("mensaje", "¡Bienvenido, " + u.getNombres() + "!");
         return switch (u.getRol().getNombre()) {
